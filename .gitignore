@@ -1,0 +1,29 @@
+db/query/.*
+
+# Dependency directories
+/go.sum
+/go.mod
+
+# Editor-specific files
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# Vim
+*.swp
+*.swo
+
+# OS-specific files
+.DS_Store         # macOS
+Thumbs.db         # Windows
+
+# Backup files
+*.bak
+*.bk
+*.old
+*.orig
+
+# Temporary files
+*.tmp
+*.temp
