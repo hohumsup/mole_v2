@@ -5,7 +5,6 @@ CREATE TABLE "entity" (
   "entity_id" uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   "name" varchar NOT NULL,
   "description" text NOT NULL DEFAULT 'Auto-generated description'
-  "entity_type" text NOT NULL DEFAULT 'Unknown'
 );
 
 CREATE TABLE "location" (
