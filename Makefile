@@ -1,6 +1,10 @@
-postgres:
-	docker run --name postgres -p 5432:5432 -e POSTGRES_USER=mole_user -e POSTGRES_PASSWORD=secret -d postgis/postgis:16-3.5-alpine
+create-postgres:
+	docker run --name postgres -p 5432:5432 -e POSTGRES_USER=mole_user -e POSTGRES_PASSWORD=secret -d postgis/postgis:16-3.5
 
+remove-postgres:
+	docker stop postgres
+	docker rm postgres
+	
 createdb:
 	docker exec -it postgres createdb --username=mole_user --owner=mole_user mole
 
@@ -18,5 +22,8 @@ sqlc:
 
 test:
 	go test -v -cover ./...
+
+server:
+	go run main.go
 
 .PHONY: postgres createdb dropdb migrateup migratedown sqlc test
