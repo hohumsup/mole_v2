@@ -12,14 +12,14 @@ import (
 
 type Querier interface {
 	CreateEntity(ctx context.Context, arg CreateEntityParams) (Entity, error)
+	// Return the IDs of the created/selected entity, location, and position
+	CreateEntityWithPosition(ctx context.Context, arg CreateEntityWithPositionParams) (CreateEntityWithPositionRow, error)
 	DeleteEntity(ctx context.Context, entityID uuid.UUID) error
 	GetEntitiesByNames(ctx context.Context, dollar_1 []string) ([]Entity, error)
 	GetEntity(ctx context.Context, entityID uuid.UUID) (Entity, error)
 	GetEntityByName(ctx context.Context, name string) (Entity, error)
 	// ensures that the input parameter is explicitly cast as a PostgreSQL array of text
 	ListEntities(ctx context.Context, arg ListEntitiesParams) ([]Entity, error)
-	// Return the entity ID, location ID, and position ID
-	RegisterEntityWithPosition(ctx context.Context, arg RegisterEntityWithPositionParams) (RegisterEntityWithPositionRow, error)
 	UpdateEntityByName(ctx context.Context, arg UpdateEntityByNameParams) (Entity, error)
 }
 

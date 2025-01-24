@@ -2,7 +2,7 @@ CREATE EXTENSION postgis;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE "entity" (
-  "entity_id" uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "entity_id" uuid PRIMARY KEY,
   "name" varchar NOT NULL,
   "description" text NOT NULL DEFAULT 'Auto-generated description'
 );
@@ -19,6 +19,7 @@ CREATE TABLE "position" (
   "location_id" bigint NOT NULL,
   "latitude_degrees" double precision NOT NULL,
   "longitude_degrees" double precision NOT NULL,
+  "heading_degrees" double precision,
   "altitude_hae_meters" double precision,
   "speed_mps" double precision
 );
@@ -149,7 +150,7 @@ COMMENT ON COLUMN "context"."specific_type" IS 'A detailed categorization or mod
 
 COMMENT ON COLUMN "context"."created_at" IS 'Timestamp for when the context record was created';
 
-ALTER TABLE "entity" ADD CONSTRAINT unique_name UNIQUE (name);
+ALTER TABLE "entity" ALTER COLUMN "entity_id" SET DEFAULT gen_random_uuid();
 
 ALTER TABLE "location" ADD FOREIGN KEY ("entity_id") REFERENCES "entity" ("entity_id");
 

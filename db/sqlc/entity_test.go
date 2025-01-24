@@ -2,16 +2,15 @@ package db
 
 import (
 	"context"
+	"database/sql"
 	"testing"
 
 	"github.com/brianvoe/gofakeit/v6"
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
 
 func CreateRandomEntity(t *testing.T) Entity {
 	arg := CreateEntityParams{
-		EntityID:    uuid.New(),
 		Name:        gofakeit.Name(),
 		Description: gofakeit.Sentence(5),
 	}
@@ -20,7 +19,6 @@ func CreateRandomEntity(t *testing.T) Entity {
 	require.NoError(t, err)
 	require.NotEmpty(t, entity)
 
-	require.Equal(t, arg.EntityID, entity.EntityID)
 	require.Equal(t, arg.Name, entity.Name)
 	require.Equal(t, arg.Description, entity.Description)
 
@@ -141,4 +139,32 @@ func TestDeleteEntity(t *testing.T) {
 	entity2, err := testQueries.GetEntity(context.Background(), entity1.EntityID)
 	require.Error(t, err)
 	require.Empty(t, entity2)
+}
+
+func TestCreateEntityWithPosition(t *testing.T) {
+	randomEntity := CreateRandomEntity(t)
+
+	name := randomEntity.Name
+	description := randomEntity.Description
+	latitude := 37.7749
+	longitude := -122.4194
+	heading := 90.0
+	altitude := 15.0
+	speed := 5.0
+
+	result, err := testQueries.CreateEntityWithPosition(context.Background(), CreateEntityWithPositionParams{
+		Name:              name,
+		Description:       description,
+		LatitudeDegrees:   latitude,
+		LongitudeDegrees:  longitude,
+		HeadingDegrees:    sql.NullFloat64{Float64: heading, Valid: true},
+		AltitudeHaeMeters: sql.NullFloat64{Float64: altitude, Valid: true},
+		SpeedMps:          sql.NullFloat64{Float64: speed, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("Failed to create entity with position: %v", err)
+	}
+
+	require.NoError(t, err)
+	require.NotEmpty(t, result)
 }

@@ -16,9 +16,9 @@ type Context struct {
 	ID int64 `json:"id"`
 	// Reference to the associated entity
 	EntityID uuid.UUID `json:"entity_id"`
-	// High-level classification (e.g., 'vehicle', 'sensor')
+	// High-level classification (e.g., 'event-type', 'vehicle', 'sensor')
 	EntityType string `json:"entity_type"`
-	// Specific type or model (e.g., 'Predator Drone')
+	// A detailed categorization or model within the high-level classification (e.g., 'Detection', 'Fixed-wing', 'Weather-station')
 	SpecificType string `json:"specific_type"`
 	// Timestamp for when the context record was created
 	CreatedAt time.Time `json:"created_at"`
@@ -73,7 +73,8 @@ type Position struct {
 	// WGS84 geodetic latitude in decimal degrees.
 	LatitudeDegrees float64 `json:"latitude_degrees"`
 	// WGS84 longitude in decimal degrees.
-	LongitudeDegrees float64 `json:"longitude_degrees"`
+	LongitudeDegrees float64         `json:"longitude_degrees"`
+	HeadingDegrees   sql.NullFloat64 `json:"heading_degrees"`
 	// Altitude as height above ellipsoid (WGS84), in meters.
 	AltitudeHaeMeters sql.NullFloat64 `json:"altitude_hae_meters"`
 	// Speed as the magnitude of velocity, in meters per second.
