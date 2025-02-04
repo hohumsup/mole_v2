@@ -1,11 +1,13 @@
-CREATE EXTENSION postgis;
+CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 
 CREATE TABLE "entity" (
   "entity_id" uuid PRIMARY KEY,
   "name" varchar NOT NULL,
-  "description" text NOT NULL DEFAULT 'Auto-generated description'
-);
+  "description" text NOT NULL DEFAULT 'Auto-generated description',
+  "integrator_name" varchar NOT NULL
+ );
 
 CREATE TABLE "location" (
   "id" bigserial PRIMARY KEY,
@@ -36,21 +38,21 @@ CREATE TABLE "geo_detail" (
   "modified_at" timestamptz NOT NULL DEFAULT 'now()'
 );
 
-CREATE TABLE "provenance" (
-  "id" bigserial PRIMARY KEY,
-  "entity_id" uuid NOT NULL,
-  "integration_name" varchar NOT NULL,
-  "data_type" varchar,
-  "source_name" varchar,
-  "source_update_time" timestamptz NOT NULL,
-  "created_at" timestamptz NOT NULL DEFAULT 'now()'
-);
-
 CREATE TABLE "context" (
   "id" bigserial PRIMARY KEY,
   "entity_id" uuid NOT NULL,
   "entity_type" varchar NOT NULL,
   "specific_type" varchar NOT NULL,
+  "created_at" timestamptz NOT NULL DEFAULT 'now()'
+);
+
+
+CREATE TABLE "provenance" (
+  "id" bigserial PRIMARY KEY,
+  "entity_id" uuid NOT NULL,
+  "data_type" varchar,
+  "source_name" varchar,
+  "source_update_time" timestamptz NOT NULL,
   "created_at" timestamptz NOT NULL DEFAULT 'now()'
 );
 
@@ -72,8 +74,6 @@ CREATE INDEX ON "geo_detail" ("geo_polygon");
 
 CREATE INDEX ON "provenance" ("entity_id");
 
-CREATE INDEX ON "provenance" ("integration_name");
-
 CREATE INDEX ON "provenance" ("source_update_time");
 
 CREATE INDEX ON "context" ("entity_id");
@@ -87,6 +87,8 @@ COMMENT ON COLUMN "entity"."entity_id" IS 'Unique identifier for the entity';
 COMMENT ON COLUMN "entity"."name" IS 'Display name for the entity';
 
 COMMENT ON COLUMN "entity"."description" IS 'Human-readable description';
+
+COMMENT ON COLUMN "entity"."integrator_name" IS 'Name of the system producing this data';
 
 COMMENT ON COLUMN "location"."id" IS 'Unique ID for the location record';
 
@@ -128,13 +130,11 @@ COMMENT ON COLUMN "geo_detail"."modified_at" IS 'Timestamp for when the geo deta
 
 COMMENT ON COLUMN "provenance"."id" IS 'Unique ID for the provenance record';
 
-COMMENT ON COLUMN "provenance"."entity_id" IS 'Reference to the entity being tracked';
-
-COMMENT ON COLUMN "provenance"."integration_name" IS 'Name of the system producing this data';
+COMMENT ON COLUMN "provenance"."entity_id" IS 'Reference to the entity associated with this provenance record';
 
 COMMENT ON COLUMN "provenance"."data_type" IS 'Type of the relationship or data (optional)';
 
-COMMENT ON COLUMN "provenance"."source_name" IS 'Optional reference to an `entity_name`';
+COMMENT ON COLUMN "provenance"."source_name" IS 'A name or identifier for the source system (optional)';
 
 COMMENT ON COLUMN "provenance"."source_update_time" IS 'Last modification time according to the source system';
 
@@ -151,6 +151,12 @@ COMMENT ON COLUMN "context"."specific_type" IS 'A detailed categorization or mod
 COMMENT ON COLUMN "context"."created_at" IS 'Timestamp for when the context record was created';
 
 ALTER TABLE "entity" ALTER COLUMN "entity_id" SET DEFAULT gen_random_uuid();
+
+-- Drop the existing unique constraint on entity.name if it exists
+ALTER TABLE "entity" DROP CONSTRAINT IF EXISTS "entity_name_idx";
+
+-- Add a new composite unique constraint on entity.name and entity.integration_name
+ALTER TABLE "entity" ADD CONSTRAINT "unique_entity_name_integrator_name" UNIQUE ("name", "integrator_name");
 
 ALTER TABLE "location" ADD FOREIGN KEY ("entity_id") REFERENCES "entity" ("entity_id");
 
