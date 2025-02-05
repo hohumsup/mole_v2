@@ -1,9 +1,5 @@
 db/query/.*
 
-# Dependency directories
-/go.sum
-/go.mod
-
 # Editor-specific files
 .vscode/
 .idea/
