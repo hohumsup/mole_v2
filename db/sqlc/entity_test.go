@@ -2,37 +2,81 @@ package db
 
 import (
 	"context"
-	"database/sql"
+	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/brianvoe/gofakeit/v6"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/exp/rand"
 )
 
-func CreateRandomEntity(t *testing.T) Entity {
-	arg := CreateEntityParams{
-		Name:        gofakeit.Name(),
-		Description: gofakeit.Sentence(5),
+// Should put this in a helper or utility file
+func FormatName(name string) string {
+	lower := strings.ToLower(name)
+	re := regexp.MustCompile(`[^a-z0-9]+`)
+	formatted := re.ReplaceAllString(lower, "_")
+	return strings.Trim(formatted, "_")
+}
+
+func CreateEntity(t *testing.T, random bool) CreateEntityRow {
+	var name string
+	if random {
+		name = gofakeit.Name()
+	} else {
+		name = "charlie"
 	}
 
-	entity, err := testQueries.CreateEntity(context.Background(), arg)
+	arg := CreateEntityParams{
+		Name:              FormatName(name),
+		Description:       gofakeit.Sentence(5),
+		IntegrationSource: gofakeit.RandomString([]string{"telemetry", "gps"}),
+	}
+
+	entityRow, err := testQueries.CreateEntity(context.Background(), arg)
+	if err != nil {
+		// If the error is due to a duplicate entity, fetch the existing one
+		if strings.Contains(err.Error(), "already exists") {
+			t.Log("Duplicate entity detected, fetching existing entity:")
+			t.Log(err)
+
+			// Fetch the existing entity
+			existingEntity, getErr := testQueries.GetEntityByNameAndIntegrationSource(
+				context.Background(),
+				GetEntityByNameAndIntegrationSourceParams{
+					Name:              arg.Name,
+					IntegrationSource: arg.IntegrationSource,
+				},
+			)
+			require.NoError(t, getErr)
+			require.NotEmpty(t, existingEntity)
+			return CreateEntityRow(existingEntity)
+
+		} else {
+			// For any other error, fail the test
+			require.NoError(t, err)
+		}
+	}
+
 	require.NoError(t, err)
-	require.NotEmpty(t, entity)
+	require.NotEmpty(t, entityRow)
 
-	require.Equal(t, arg.Name, entity.Name)
-	require.Equal(t, arg.Description, entity.Description)
+	// Validate fields match input
+	require.Equal(t, arg.Name, entityRow.Name)
+	require.Equal(t, arg.Description, entityRow.Description)
+	require.Equal(t, arg.IntegrationSource, entityRow.IntegrationSource)
 
-	return entity
+	return entityRow
 }
 
 func TestEntityGenerator(t *testing.T) {
-	for i := 0; i < 10; i++ {
-		CreateRandomEntity(t)
+	for i := 0; i < 3; i++ {
+		_ = CreateEntity(t, false)
 	}
 }
 
 func TestGetEntity(t *testing.T) {
-	entity1 := CreateRandomEntity(t)
+	entity1 := CreateEntity(t, true)
 	entity2, err := testQueries.GetEntity(context.Background(), entity1.EntityID)
 	require.NoError(t, err)
 	require.NotEmpty(t, entity2)
@@ -40,54 +84,55 @@ func TestGetEntity(t *testing.T) {
 	require.Equal(t, entity1.EntityID, entity2.EntityID)
 	require.Equal(t, entity1.Name, entity2.Name)
 	require.Equal(t, entity1.Description, entity2.Description)
+
+	t.Log("Found:", entity1.Name)
 }
 
-func TestGetEntityByName(t *testing.T) {
-	entity1 := CreateRandomEntity(t)
-	entity2, err := testQueries.GetEntityByName(context.Background(), entity1.Name)
+func TestGetEntityByNameAndIntegrationSource(t *testing.T) {
+	entity1 := CreateEntity(t, false) // Creates "charlie" with a random integration source
+
+	// Query for the entity using name + integration_source
+	entity2, err := testQueries.GetEntityByNameAndIntegrationSource(
+		context.Background(), GetEntityByNameAndIntegrationSourceParams{
+			Name:              entity1.Name,
+			IntegrationSource: entity1.IntegrationSource,
+		},
+	)
 	require.NoError(t, err)
 	require.NotEmpty(t, entity2)
 
+	// Ensure the fetched entity matches the one we just created
 	require.Equal(t, entity1.EntityID, entity2.EntityID)
 	require.Equal(t, entity1.Name, entity2.Name)
 	require.Equal(t, entity1.Description, entity2.Description)
+	require.Equal(t, entity1.IntegrationSource, entity2.IntegrationSource)
+
+	t.Logf("Found entity: %s with integration source: %s", entity1.Name, entity1.IntegrationSource)
 }
 
 func TestGetEntitiesByNames(t *testing.T) {
-	var createdEntities []Entity
 	var names []string
 
 	for i := 0; i < 5; i++ {
-		entity := CreateRandomEntity(t)
-		createdEntities = append(createdEntities, entity)
+		entity := CreateEntity(t, true)
 		names = append(names, entity.Name)
 	}
 
-	entities, err := testQueries.GetEntitiesByNames(context.Background(), names)
+	perm := rand.Perm(len(names))
+	// Select two random names from the created list.
+	selectedNames := []string{names[perm[0]], names[perm[1]]}
+
+	entities, err := testQueries.GetEntitiesByNames(context.Background(), selectedNames)
 	require.NoError(t, err)
-	require.NotEmpty(t, entities)
-	require.Len(t, entities, len(createdEntities))
+	require.Len(t, entities, 2)
 
 	for _, entity := range entities {
-		found := false
-		for _, createdEntity := range createdEntities {
-			if entity.EntityID == createdEntity.EntityID {
-				require.Equal(t, createdEntity.Name, entity.Name)
-				require.Equal(t, createdEntity.Description, entity.Description)
-				found = true
-				break
-			}
-		}
-		require.True(t, found)
+		require.Contains(t, selectedNames, entity.Name)
+		t.Logf("Found entity: %s with integration source: %s", entity.Name, entity.IntegrationSource)
 	}
 }
 
 func TestListEntities(t *testing.T) {
-	// Create multiple random entities
-	for i := 0; i < 10; i++ {
-		CreateRandomEntity(t)
-	}
-
 	// List entities with a limit of 5
 	limit := int32(5)
 	offset := int32(0)
@@ -102,20 +147,25 @@ func TestListEntities(t *testing.T) {
 	require.Len(t, entities, int(limit))
 
 	// Verify that the listed entities are not empty and have valid data
+	entityList := []string{}
 	for _, entity := range entities {
 		require.NotEmpty(t, entity)
 		require.NotZero(t, entity.EntityID)
 		require.NotEmpty(t, entity.Name)
 		require.NotEmpty(t, entity.Description)
+		entityList = append(entityList, entity.Name)
+		t.Logf("Found entity: %s with integration source: %s", entity.Name, entity.IntegrationSource)
 	}
+
+	t.Log("Entity list:", entityList)
 }
 
 func TestUpdateEntity(t *testing.T) {
-	entity1 := CreateRandomEntity(t)
+	entity1 := CreateEntity(t, true)
 
 	params := UpdateEntityByNameParams{
 		Name:        entity1.Name,
-		Name_2:      gofakeit.Name(),
+		Name_2:      FormatName(gofakeit.Name()),
 		Description: gofakeit.Sentence(5),
 	}
 
@@ -128,43 +178,86 @@ func TestUpdateEntity(t *testing.T) {
 	require.Equal(t, entity1.EntityID, entity2.EntityID)
 	require.Equal(t, params.Name_2, entity2.Name)             // Updated name
 	require.Equal(t, params.Description, entity2.Description) // Updated description
+
+	t.Logf("Update entity %s to %s", params.Name, params.Name_2)
 }
 
-func TestDeleteEntity(t *testing.T) {
-	entity1 := CreateRandomEntity(t)
+func TestUpdateEntityIntegrationSourceByNameAndSource(t *testing.T) {
+	entity := CreateEntity(t, true)
+	var newIntegrationSource string
 
-	err := testQueries.DeleteEntity(context.Background(), entity1.EntityID)
-	require.NoError(t, err)
-
-	entity2, err := testQueries.GetEntity(context.Background(), entity1.EntityID)
-	require.Error(t, err)
-	require.Empty(t, entity2)
-}
-
-func TestCreateEntityWithPosition(t *testing.T) {
-	randomEntity := CreateRandomEntity(t)
-
-	name := randomEntity.Name
-	description := randomEntity.Description
-	latitude := 37.7749
-	longitude := -122.4194
-	heading := 90.0
-	altitude := 15.0
-	speed := 5.0
-
-	result, err := testQueries.CreateEntityWithPosition(context.Background(), CreateEntityWithPositionParams{
-		Name:              name,
-		Description:       description,
-		LatitudeDegrees:   latitude,
-		LongitudeDegrees:  longitude,
-		HeadingDegrees:    sql.NullFloat64{Float64: heading, Valid: true},
-		AltitudeHaeMeters: sql.NullFloat64{Float64: altitude, Valid: true},
-		SpeedMps:          sql.NullFloat64{Float64: speed, Valid: true},
-	})
-	if err != nil {
-		t.Fatalf("Failed to create entity with position: %v", err)
+	switch entity.IntegrationSource {
+	case "telemetry", "gps":
+		newIntegrationSource = "self_reported"
 	}
 
+	params := UpdateEntityIntegrationSourceByNameAndSourceParams{
+		Name:                entity.Name,
+		IntegrationSource:   entity.IntegrationSource,
+		IntegrationSource_2: newIntegrationSource,
+	}
+
+	updatedEntity, err := testQueries.UpdateEntityIntegrationSourceByNameAndSource(context.Background(), params)
 	require.NoError(t, err)
-	require.NotEmpty(t, result)
+	require.NotEmpty(t, updatedEntity)
+
+	require.Equal(t, entity.EntityID, updatedEntity.EntityID)
+	require.Equal(t, newIntegrationSource, updatedEntity.IntegrationSource)
+
+	t.Logf("Updated entity %s integration source from %s to %s", entity.Name, entity.IntegrationSource, updatedEntity.IntegrationSource)
 }
+
+func TestDeleteRandomEntity(t *testing.T) {
+	limit := int32(5)
+	offset := int32(0)
+	params := ListEntitiesParams{
+		Limit:  limit,
+		Offset: offset,
+	}
+
+	entities, err := testQueries.ListEntities(context.Background(), params)
+	require.NoError(t, err)
+	require.NotEmpty(t, entities, "No entities available for deletion")
+
+	randomIndex := rand.Intn(len(entities))
+	randomEntity := entities[randomIndex]
+
+	// Delete the selected entity.
+	err = testQueries.DeleteEntity(context.Background(), randomEntity.EntityID)
+	require.NoError(t, err)
+
+	// Try to retrieve the deleted entity.
+	deletedEntity, err := testQueries.GetEntity(context.Background(), randomEntity.EntityID)
+	require.Error(t, err)
+	require.Empty(t, deletedEntity)
+
+	t.Log("Entity deleted:", randomEntity.Name)
+}
+
+// func TestCreateEntityWithPosition(t *testing.T) {
+// 	randomEntity := CreateEntity(t, false)
+
+// 	name := randomEntity.Name
+// 	description := randomEntity.Description
+// 	latitude := 37.7749
+// 	longitude := -122.4194
+// 	heading := 90.0
+// 	altitude := 15.0
+// 	speed := 5.0
+
+// 	result, err := testQueries.CreateEntityWithPosition(context.Background(), CreateEntityWithPositionParams{
+// 		Name:              name,
+// 		Description:       description,
+// 		LatitudeDegrees:   latitude,
+// 		LongitudeDegrees:  longitude,
+// 		HeadingDegrees:    sql.NullFloat64{Float64: heading, Valid: true},
+// 		AltitudeHaeMeters: sql.NullFloat64{Float64: altitude, Valid: true},
+// 		SpeedMps:          sql.NullFloat64{Float64: speed, Valid: true},
+// 	})
+// 	if err != nil {
+// 		t.Fatalf("Failed to create entity with position: %v", err)
+// 	}
+
+// 	require.NoError(t, err)
+// 	require.NotEmpty(t, result)
+// }

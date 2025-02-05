@@ -48,9 +48,9 @@ type GeoDetail struct {
 	GeoEllipse interface{} `json:"geo_ellipse"`
 	// Geospatial ellipsoid representation of the entity.
 	GeoEllipsoid interface{} `json:"geo_ellipsoid"`
-	// Timestamp for when the geo detail was created
+	// Client-provided timestamp for when the geo detail was created
 	CreatedAt time.Time `json:"created_at"`
-	// Timestamp for when the geo detail was last updated
+	// Server-generated timestamp for when the geo detail was last updated
 	ModifiedAt time.Time `json:"modified_at"`
 }
 
@@ -73,8 +73,9 @@ type Position struct {
 	// WGS84 geodetic latitude in decimal degrees.
 	LatitudeDegrees float64 `json:"latitude_degrees"`
 	// WGS84 longitude in decimal degrees.
-	LongitudeDegrees float64         `json:"longitude_degrees"`
-	HeadingDegrees   sql.NullFloat64 `json:"heading_degrees"`
+	LongitudeDegrees float64 `json:"longitude_degrees"`
+	// Heading in degrees.
+	HeadingDegrees sql.NullFloat64 `json:"heading_degrees"`
 	// Altitude as height above ellipsoid (WGS84), in meters.
 	AltitudeHaeMeters sql.NullFloat64 `json:"altitude_hae_meters"`
 	// Speed as the magnitude of velocity, in meters per second.
@@ -84,17 +85,16 @@ type Position struct {
 type Provenance struct {
 	// Unique ID for the provenance record
 	ID int64 `json:"id"`
-	// Reference to the entity being tracked
+	// Reference to the entity associated with this provenance record
 	EntityID uuid.UUID `json:"entity_id"`
-	// Name of the system producing this data
-	IntegrationName string `json:"integration_name"`
-	// Type of the relationship or data (optional)
+	// Optional name or identifier for the source system (e.g., 'gps', 'telemetry')
 	DataType sql.NullString `json:"data_type"`
-	// Optional reference to an `entity_name`
+	// Optional name for the entity that generated this entity. Used for events such as detections or tracks
 	SourceName sql.NullString `json:"source_name"`
+	// Integration source used for which system provided the data (e.g., 'TAK')
+	IntegrationSource string `json:"integration_source"`
 	// Last modification time according to the source system
 	SourceUpdateTime time.Time `json:"source_update_time"`
 	// Timestamp for when the provenance record was created
-	CreatedAt  time.Time     `json:"created_at"`
-	LocationID sql.NullInt64 `json:"location_id"`
+	CreatedAt time.Time `json:"created_at"`
 }

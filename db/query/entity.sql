@@ -1,22 +1,52 @@
 -- name: CreateEntity :one
-INSERT INTO entity (name, description)
-VALUES ($1, $2) RETURNING *;
+WITH new_entity AS (
+  INSERT INTO entity (name, description)
+  VALUES ($1, $2)
+  RETURNING *
+),
+new_provenance AS (
+  INSERT INTO provenance (entity_id, data_type, source_name, integration_source, source_update_time)
+  SELECT entity_id, $3, $4, $5, now()
+  FROM new_entity
+  RETURNING entity_id, integration_source
+)
+SELECT e.entity_id, e.name, e.description, p.integration_source
+FROM new_entity e
+JOIN new_provenance p ON e.entity_id = p.entity_id;
+
 
 -- name: GetEntity :one
 SELECT * FROM entity
 WHERE entity_id = $1;
 
--- name: GetEntityByName :one
-SELECT * FROM entity
-WHERE name = $1;
+-- name: GetEntityByNameAndIntegrationSource :one
+SELECT 
+    e.entity_id, 
+    e.name, 
+    e.description, 
+    p.integration_source
+FROM entity e
+JOIN provenance p ON e.entity_id = p.entity_id
+WHERE e.name = $1 AND p.integration_source = $2
+LIMIT 1;
+
+-- name: GetEntityByNames :many
+SELECT e.entity_id, e.name, e.description, p.integration_source
+FROM entity e
+JOIN provenance p on e.entity_id = p.entity_id
+where e.name = $1;
 
 -- name: GetEntitiesByNames :many
-SELECT * FROM entity
-WHERE name = ANY($1::text[]); -- ensures that the input parameter is explicitly cast as a PostgreSQL array of text
+SELECT e.entity_id, e.name, e.description, p.integration_source
+FROM entity e
+JOIN provenance p on e.entity_id = p.entity_id
+WHERE name = ANY($1::text[]);
 
 -- name: ListEntities :many
-SELECT * FROM entity
-ORDER BY entity_id
+SELECT e.entity_id, e.name, e.description, p.integration_source
+FROM entity e
+JOIN provenance p on e.entity_id = p.entity_id
+ORDER BY e.entity_id
 LIMIT $1 OFFSET $2;
 
 -- name: UpdateEntityByName :one
@@ -26,6 +56,15 @@ SET
   description = $3
 WHERE name = $1
 RETURNING entity_id, name, description;
+
+-- name: UpdateEntityIntegrationSourceByNameAndSource :one
+UPDATE provenance
+SET integration_source = $3
+WHERE entity_id = (
+  SELECT entity_id FROM entity WHERE name = $1
+)
+AND integration_source = $2
+RETURNING entity_id, integration_source;
 
 -- name: DeleteEntity :exec
 DELETE FROM entity

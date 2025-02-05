@@ -14,19 +14,52 @@ import (
 )
 
 const createEntity = `-- name: CreateEntity :one
-INSERT INTO entity (name, description)
-VALUES ($1, $2) RETURNING entity_id, name, description
+WITH new_entity AS (
+  INSERT INTO entity (name, description)
+  VALUES ($1, $2)
+  RETURNING entity_id, name, description
+),
+new_provenance AS (
+  INSERT INTO provenance (entity_id, data_type, source_name, integration_source, source_update_time)
+  SELECT entity_id, $3, $4, $5, now()
+  FROM new_entity
+  RETURNING entity_id, integration_source
+)
+SELECT e.entity_id, e.name, e.description, p.integration_source
+FROM new_entity e
+JOIN new_provenance p ON e.entity_id = p.entity_id
 `
 
 type CreateEntityParams struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
+	Name              string         `json:"name"`
+	Description       string         `json:"description"`
+	DataType          sql.NullString `json:"data_type"`
+	SourceName        sql.NullString `json:"source_name"`
+	IntegrationSource string         `json:"integration_source"`
 }
 
-func (q *Queries) CreateEntity(ctx context.Context, arg CreateEntityParams) (Entity, error) {
-	row := q.db.QueryRowContext(ctx, createEntity, arg.Name, arg.Description)
-	var i Entity
-	err := row.Scan(&i.EntityID, &i.Name, &i.Description)
+type CreateEntityRow struct {
+	EntityID          uuid.UUID `json:"entity_id"`
+	Name              string    `json:"name"`
+	Description       string    `json:"description"`
+	IntegrationSource string    `json:"integration_source"`
+}
+
+func (q *Queries) CreateEntity(ctx context.Context, arg CreateEntityParams) (CreateEntityRow, error) {
+	row := q.db.QueryRowContext(ctx, createEntity,
+		arg.Name,
+		arg.Description,
+		arg.DataType,
+		arg.SourceName,
+		arg.IntegrationSource,
+	)
+	var i CreateEntityRow
+	err := row.Scan(
+		&i.EntityID,
+		&i.Name,
+		&i.Description,
+		&i.IntegrationSource,
+	)
 	return i, err
 }
 
@@ -110,20 +143,34 @@ func (q *Queries) DeleteEntity(ctx context.Context, entityID uuid.UUID) error {
 }
 
 const getEntitiesByNames = `-- name: GetEntitiesByNames :many
-SELECT entity_id, name, description FROM entity
+SELECT e.entity_id, e.name, e.description, p.integration_source
+FROM entity e
+JOIN provenance p on e.entity_id = p.entity_id
 WHERE name = ANY($1::text[])
 `
 
-func (q *Queries) GetEntitiesByNames(ctx context.Context, dollar_1 []string) ([]Entity, error) {
+type GetEntitiesByNamesRow struct {
+	EntityID          uuid.UUID `json:"entity_id"`
+	Name              string    `json:"name"`
+	Description       string    `json:"description"`
+	IntegrationSource string    `json:"integration_source"`
+}
+
+func (q *Queries) GetEntitiesByNames(ctx context.Context, dollar_1 []string) ([]GetEntitiesByNamesRow, error) {
 	rows, err := q.db.QueryContext(ctx, getEntitiesByNames, pq.Array(dollar_1))
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Entity{}
+	items := []GetEntitiesByNamesRow{}
 	for rows.Next() {
-		var i Entity
-		if err := rows.Scan(&i.EntityID, &i.Name, &i.Description); err != nil {
+		var i GetEntitiesByNamesRow
+		if err := rows.Scan(
+			&i.EntityID,
+			&i.Name,
+			&i.Description,
+			&i.IntegrationSource,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -149,22 +196,89 @@ func (q *Queries) GetEntity(ctx context.Context, entityID uuid.UUID) (Entity, er
 	return i, err
 }
 
-const getEntityByName = `-- name: GetEntityByName :one
-SELECT entity_id, name, description FROM entity
-WHERE name = $1
+const getEntityByNameAndIntegrationSource = `-- name: GetEntityByNameAndIntegrationSource :one
+SELECT 
+    e.entity_id, 
+    e.name, 
+    e.description, 
+    p.integration_source
+FROM entity e
+JOIN provenance p ON e.entity_id = p.entity_id
+WHERE e.name = $1 AND p.integration_source = $2
+LIMIT 1
 `
 
-func (q *Queries) GetEntityByName(ctx context.Context, name string) (Entity, error) {
-	row := q.db.QueryRowContext(ctx, getEntityByName, name)
-	var i Entity
-	err := row.Scan(&i.EntityID, &i.Name, &i.Description)
+type GetEntityByNameAndIntegrationSourceParams struct {
+	Name              string `json:"name"`
+	IntegrationSource string `json:"integration_source"`
+}
+
+type GetEntityByNameAndIntegrationSourceRow struct {
+	EntityID          uuid.UUID `json:"entity_id"`
+	Name              string    `json:"name"`
+	Description       string    `json:"description"`
+	IntegrationSource string    `json:"integration_source"`
+}
+
+func (q *Queries) GetEntityByNameAndIntegrationSource(ctx context.Context, arg GetEntityByNameAndIntegrationSourceParams) (GetEntityByNameAndIntegrationSourceRow, error) {
+	row := q.db.QueryRowContext(ctx, getEntityByNameAndIntegrationSource, arg.Name, arg.IntegrationSource)
+	var i GetEntityByNameAndIntegrationSourceRow
+	err := row.Scan(
+		&i.EntityID,
+		&i.Name,
+		&i.Description,
+		&i.IntegrationSource,
+	)
 	return i, err
 }
 
-const listEntities = `-- name: ListEntities :many
+const getEntityByNames = `-- name: GetEntityByNames :many
+SELECT e.entity_id, e.name, e.description, p.integration_source
+FROM entity e
+JOIN provenance p on e.entity_id = p.entity_id
+where e.name = $1
+`
 
-SELECT entity_id, name, description FROM entity
-ORDER BY entity_id
+type GetEntityByNamesRow struct {
+	EntityID          uuid.UUID `json:"entity_id"`
+	Name              string    `json:"name"`
+	Description       string    `json:"description"`
+	IntegrationSource string    `json:"integration_source"`
+}
+
+func (q *Queries) GetEntityByNames(ctx context.Context, name string) ([]GetEntityByNamesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getEntityByNames, name)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetEntityByNamesRow{}
+	for rows.Next() {
+		var i GetEntityByNamesRow
+		if err := rows.Scan(
+			&i.EntityID,
+			&i.Name,
+			&i.Description,
+			&i.IntegrationSource,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listEntities = `-- name: ListEntities :many
+SELECT e.entity_id, e.name, e.description, p.integration_source
+FROM entity e
+JOIN provenance p on e.entity_id = p.entity_id
+ORDER BY e.entity_id
 LIMIT $1 OFFSET $2
 `
 
@@ -173,17 +287,28 @@ type ListEntitiesParams struct {
 	Offset int32 `json:"offset"`
 }
 
-// ensures that the input parameter is explicitly cast as a PostgreSQL array of text
-func (q *Queries) ListEntities(ctx context.Context, arg ListEntitiesParams) ([]Entity, error) {
+type ListEntitiesRow struct {
+	EntityID          uuid.UUID `json:"entity_id"`
+	Name              string    `json:"name"`
+	Description       string    `json:"description"`
+	IntegrationSource string    `json:"integration_source"`
+}
+
+func (q *Queries) ListEntities(ctx context.Context, arg ListEntitiesParams) ([]ListEntitiesRow, error) {
 	rows, err := q.db.QueryContext(ctx, listEntities, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Entity{}
+	items := []ListEntitiesRow{}
 	for rows.Next() {
-		var i Entity
-		if err := rows.Scan(&i.EntityID, &i.Name, &i.Description); err != nil {
+		var i ListEntitiesRow
+		if err := rows.Scan(
+			&i.EntityID,
+			&i.Name,
+			&i.Description,
+			&i.IntegrationSource,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -216,5 +341,33 @@ func (q *Queries) UpdateEntityByName(ctx context.Context, arg UpdateEntityByName
 	row := q.db.QueryRowContext(ctx, updateEntityByName, arg.Name, arg.Name_2, arg.Description)
 	var i Entity
 	err := row.Scan(&i.EntityID, &i.Name, &i.Description)
+	return i, err
+}
+
+const updateEntityIntegrationSourceByNameAndSource = `-- name: UpdateEntityIntegrationSourceByNameAndSource :one
+UPDATE provenance
+SET integration_source = $3
+WHERE entity_id = (
+  SELECT entity_id FROM entity WHERE name = $1
+)
+AND integration_source = $2
+RETURNING entity_id, integration_source
+`
+
+type UpdateEntityIntegrationSourceByNameAndSourceParams struct {
+	Name                string `json:"name"`
+	IntegrationSource   string `json:"integration_source"`
+	IntegrationSource_2 string `json:"integration_source_2"`
+}
+
+type UpdateEntityIntegrationSourceByNameAndSourceRow struct {
+	EntityID          uuid.UUID `json:"entity_id"`
+	IntegrationSource string    `json:"integration_source"`
+}
+
+func (q *Queries) UpdateEntityIntegrationSourceByNameAndSource(ctx context.Context, arg UpdateEntityIntegrationSourceByNameAndSourceParams) (UpdateEntityIntegrationSourceByNameAndSourceRow, error) {
+	row := q.db.QueryRowContext(ctx, updateEntityIntegrationSourceByNameAndSource, arg.Name, arg.IntegrationSource, arg.IntegrationSource_2)
+	var i UpdateEntityIntegrationSourceByNameAndSourceRow
+	err := row.Scan(&i.EntityID, &i.IntegrationSource)
 	return i, err
 }

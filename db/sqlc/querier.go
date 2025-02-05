@@ -11,16 +11,17 @@ import (
 )
 
 type Querier interface {
-	CreateEntity(ctx context.Context, arg CreateEntityParams) (Entity, error)
+	CreateEntity(ctx context.Context, arg CreateEntityParams) (CreateEntityRow, error)
 	// Return the IDs of the created/selected entity, location, and position
 	CreateEntityWithPosition(ctx context.Context, arg CreateEntityWithPositionParams) (CreateEntityWithPositionRow, error)
 	DeleteEntity(ctx context.Context, entityID uuid.UUID) error
-	GetEntitiesByNames(ctx context.Context, dollar_1 []string) ([]Entity, error)
+	GetEntitiesByNames(ctx context.Context, dollar_1 []string) ([]GetEntitiesByNamesRow, error)
 	GetEntity(ctx context.Context, entityID uuid.UUID) (Entity, error)
-	GetEntityByName(ctx context.Context, name string) (Entity, error)
-	// ensures that the input parameter is explicitly cast as a PostgreSQL array of text
-	ListEntities(ctx context.Context, arg ListEntitiesParams) ([]Entity, error)
+	GetEntityByNameAndIntegrationSource(ctx context.Context, arg GetEntityByNameAndIntegrationSourceParams) (GetEntityByNameAndIntegrationSourceRow, error)
+	GetEntityByNames(ctx context.Context, name string) ([]GetEntityByNamesRow, error)
+	ListEntities(ctx context.Context, arg ListEntitiesParams) ([]ListEntitiesRow, error)
 	UpdateEntityByName(ctx context.Context, arg UpdateEntityByNameParams) (Entity, error)
+	UpdateEntityIntegrationSourceByNameAndSource(ctx context.Context, arg UpdateEntityIntegrationSourceByNameAndSourceParams) (UpdateEntityIntegrationSourceByNameAndSourceRow, error)
 }
 
 var _ Querier = (*Queries)(nil)
