@@ -21,7 +21,8 @@ sqlc:
 	sqlc generate
 
 test:
-	go test -v -cover ./...
+	go test -v -cover $(shell go list ./...)
+
 
 server:
 	go run main.go
