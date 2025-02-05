@@ -48,4 +48,6 @@ jobs:
       run: make migrateup
 
     - name: Test
-      run: make test
+      run: |
+        cd $GITHUB_WORKSPACE/mole  # Use the actual module directory name
+        make test
