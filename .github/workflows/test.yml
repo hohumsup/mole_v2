@@ -37,8 +37,13 @@ jobs:
 
     - name: Check out code into the Go module directory
       uses: actions/checkout@v3
-      with:
-        path: mole_v2  # Ensure the repo is placed correctly
+
+    - name: Debug Environment
+      run: |
+        pwd
+        ls -la
+        go env
+        go list -m
 
     - name: Install golang-migrate
       run: |
