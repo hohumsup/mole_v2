@@ -2,11 +2,14 @@ package db
 
 import (
 	"context"
+	"database/sql"
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/brianvoe/gofakeit/v6"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/exp/rand"
 )
@@ -234,30 +237,63 @@ func TestDeleteRandomEntity(t *testing.T) {
 	t.Log("Entity deleted:", randomEntity.Name)
 }
 
-// func TestCreateEntityWithPosition(t *testing.T) {
-// 	randomEntity := CreateEntity(t, false)
+func TestCreateAndUpdateEntityWithLocationAndPosition(t *testing.T) {
+	// Add position data to an existing entity and create an entity with position
+	for _, toggle := range []bool{true, false} {
+		getEntity := CreateEntity(t, toggle)
 
-// 	name := randomEntity.Name
-// 	description := randomEntity.Description
-// 	latitude := 37.7749
-// 	longitude := -122.4194
-// 	heading := 90.0
-// 	altitude := 15.0
-// 	speed := 5.0
+		entity, err := testQueries.GetEntityByNameAndIntegrationSource(context.Background(), GetEntityByNameAndIntegrationSourceParams{
+			Name:              getEntity.Name,
+			IntegrationSource: getEntity.IntegrationSource,
+		})
+		if err != nil && err != sql.ErrNoRows {
+			t.Fatalf("Failed to get entity by name and integration source: %v", err)
+		}
 
-// 	result, err := testQueries.CreateEntityWithPosition(context.Background(), CreateEntityWithPositionParams{
-// 		Name:              name,
-// 		Description:       description,
-// 		LatitudeDegrees:   latitude,
-// 		LongitudeDegrees:  longitude,
-// 		HeadingDegrees:    sql.NullFloat64{Float64: heading, Valid: true},
-// 		AltitudeHaeMeters: sql.NullFloat64{Float64: altitude, Valid: true},
-// 		SpeedMps:          sql.NullFloat64{Float64: speed, Valid: true},
-// 	})
-// 	if err != nil {
-// 		t.Fatalf("Failed to create entity with position: %v", err)
-// 	}
+		var entityID uuid.UUID
+		if err == sql.ErrNoRows {
+			// Create a new entity if it doesn’t exist
+			newEntity, err := testQueries.CreateEntity(context.Background(), CreateEntityParams{
+				Name:              getEntity.Name,
+				Description:       getEntity.Description,
+				DataType:          sql.NullString{Valid: false},
+				SourceName:        sql.NullString{Valid: false},
+				IntegrationSource: getEntity.IntegrationSource,
+			})
+			if err != nil {
+				t.Fatalf("Failed to create new entity: %v", err)
+			}
+			entityID = newEntity.EntityID
+		} else {
+			// If entity exists, use its ID
+			entityID = entity.EntityID
+		}
 
-// 	require.NoError(t, err)
-// 	require.NotEmpty(t, result)
-// }
+		// Insert location
+		locationID, err := testQueries.InsertLocation(context.Background(), InsertLocationParams{
+			EntityID:  entityID,
+			CreatedAt: time.Now().UTC(),
+		})
+		if err != nil {
+			t.Fatalf("Failed to insert location: %v", err)
+		}
+
+		// Hardcoded position values
+		position := InsertPositionParams{
+			LocationID:        locationID,
+			LatitudeDegrees:   36.7749,
+			LongitudeDegrees:  -123.4194,
+			HeadingDegrees:    sql.NullFloat64{Float64: 90.0, Valid: true},
+			AltitudeHaeMeters: sql.NullFloat64{Float64: 100.0, Valid: true},
+			SpeedMps:          sql.NullFloat64{Float64: 22.0, Valid: true},
+		}
+
+		// Insert position
+		err = testQueries.InsertPosition(context.Background(), position)
+		if err != nil {
+			t.Fatalf("Failed to insert position: %v", err)
+		}
+
+		t.Log("Location and position data created for", entity.Name)
+	}
+}

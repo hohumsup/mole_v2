@@ -8,6 +8,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/lib/pq"
@@ -60,75 +61,6 @@ func (q *Queries) CreateEntity(ctx context.Context, arg CreateEntityParams) (Cre
 		&i.Description,
 		&i.IntegrationSource,
 	)
-	return i, err
-}
-
-const createEntityWithPosition = `-- name: CreateEntityWithPosition :one
-WITH entity_inserted AS (
-  -- Insert the entity if it doesn't already exist
-  INSERT INTO entity (entity_id, name, description)
-  VALUES (uuid_generate_v4(), $1, $2)
-  ON CONFLICT (name) DO NOTHING -- Entity exists
-  RETURNING entity_id
-),
-entity_selected AS (
-  -- Retrieve the entity_id, whether newly inserted or already existing
-  SELECT entity_id
-  FROM entity
-  WHERE name = $1
-),
-location_inserted AS (
-  -- Insert the location for the entity
-  INSERT INTO location (entity_id, created_at, modified_at)
-  SELECT entity_id, now(), now()
-  FROM entity_selected
-  RETURNING id AS location_id
-),
-position_inserted AS (
-  -- Insert the position data for the location
-  INSERT INTO position (location_id, latitude_degrees, longitude_degrees, heading_degrees, altitude_hae_meters, speed_mps)
-  SELECT location_id, $3, $4, $5, $6, $7
-  FROM location_inserted
-  RETURNING id AS position_id
-)
-SELECT
-  es.entity_id,
-  li.location_id,
-  pi.position_id
-FROM entity_selected es
-LEFT JOIN location_inserted li ON TRUE
-LEFT JOIN position_inserted pi ON TRUE
-`
-
-type CreateEntityWithPositionParams struct {
-	Name              string          `json:"name"`
-	Description       string          `json:"description"`
-	LatitudeDegrees   float64         `json:"latitude_degrees"`
-	LongitudeDegrees  float64         `json:"longitude_degrees"`
-	HeadingDegrees    sql.NullFloat64 `json:"heading_degrees"`
-	AltitudeHaeMeters sql.NullFloat64 `json:"altitude_hae_meters"`
-	SpeedMps          sql.NullFloat64 `json:"speed_mps"`
-}
-
-type CreateEntityWithPositionRow struct {
-	EntityID   uuid.UUID     `json:"entity_id"`
-	LocationID sql.NullInt64 `json:"location_id"`
-	PositionID sql.NullInt64 `json:"position_id"`
-}
-
-// Return the IDs of the created/selected entity, location, and position
-func (q *Queries) CreateEntityWithPosition(ctx context.Context, arg CreateEntityWithPositionParams) (CreateEntityWithPositionRow, error) {
-	row := q.db.QueryRowContext(ctx, createEntityWithPosition,
-		arg.Name,
-		arg.Description,
-		arg.LatitudeDegrees,
-		arg.LongitudeDegrees,
-		arg.HeadingDegrees,
-		arg.AltitudeHaeMeters,
-		arg.SpeedMps,
-	)
-	var i CreateEntityWithPositionRow
-	err := row.Scan(&i.EntityID, &i.LocationID, &i.PositionID)
 	return i, err
 }
 
@@ -272,6 +204,50 @@ func (q *Queries) GetEntityByNames(ctx context.Context, name string) ([]GetEntit
 		return nil, err
 	}
 	return items, nil
+}
+
+const insertLocation = `-- name: InsertLocation :one
+INSERT INTO location (entity_id, created_at)
+VALUES ($1, $2)
+RETURNING id
+`
+
+type InsertLocationParams struct {
+	EntityID  uuid.UUID `json:"entity_id"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+func (q *Queries) InsertLocation(ctx context.Context, arg InsertLocationParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, insertLocation, arg.EntityID, arg.CreatedAt)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
+const insertPosition = `-- name: InsertPosition :exec
+INSERT INTO position (location_id, latitude_degrees, longitude_degrees, heading_degrees, altitude_hae_meters, speed_mps)
+VALUES ($1, $2, $3, $4, $5, $6)
+`
+
+type InsertPositionParams struct {
+	LocationID        int64           `json:"location_id"`
+	LatitudeDegrees   float64         `json:"latitude_degrees"`
+	LongitudeDegrees  float64         `json:"longitude_degrees"`
+	HeadingDegrees    sql.NullFloat64 `json:"heading_degrees"`
+	AltitudeHaeMeters sql.NullFloat64 `json:"altitude_hae_meters"`
+	SpeedMps          sql.NullFloat64 `json:"speed_mps"`
+}
+
+func (q *Queries) InsertPosition(ctx context.Context, arg InsertPositionParams) error {
+	_, err := q.db.ExecContext(ctx, insertPosition,
+		arg.LocationID,
+		arg.LatitudeDegrees,
+		arg.LongitudeDegrees,
+		arg.HeadingDegrees,
+		arg.AltitudeHaeMeters,
+		arg.SpeedMps,
+	)
+	return err
 }
 
 const listEntities = `-- name: ListEntities :many

@@ -118,13 +118,9 @@ ALTER TABLE "provenance"
   ADD FOREIGN KEY ("entity_id") 
     REFERENCES "entity" ("entity_id") 
     ON DELETE CASCADE;
-
+  
 CREATE INDEX ON "provenance" ("entity_id");
 CREATE INDEX ON "provenance" ("source_update_time");
-
--- Enforce one provenance record per entity per integration_source.
-CREATE UNIQUE INDEX IF NOT EXISTS provenance_entity_integration_source_idx 
-  ON provenance(entity_id, integration_source);
 
 COMMENT ON COLUMN "provenance"."id" IS 'Unique ID for the provenance record';
 COMMENT ON COLUMN "provenance"."entity_id" IS 'Reference to the entity associated with this provenance record';

@@ -1,3 +1,7 @@
+------------------------------------------------------
+-- Entity Queries (Appended Below Existing Queries)
+------------------------------------------------------
+
 -- name: CreateEntity :one
 WITH new_entity AS (
   INSERT INTO entity (name, description)
@@ -13,7 +17,6 @@ new_provenance AS (
 SELECT e.entity_id, e.name, e.description, p.integration_source
 FROM new_entity e
 JOIN new_provenance p ON e.entity_id = p.entity_id;
-
 
 -- name: GetEntity :one
 SELECT * FROM entity
@@ -70,39 +73,30 @@ RETURNING entity_id, integration_source;
 DELETE FROM entity
 WHERE entity_id = $1;
 
--- name: CreateEntityWithPosition :one
-WITH entity_inserted AS (
-  -- Insert the entity if it doesn't already exist
-  INSERT INTO entity (entity_id, name, description)
-  VALUES (uuid_generate_v4(), $1, $2)
-  ON CONFLICT (name) DO NOTHING -- Entity exists
-  RETURNING entity_id
-),
-entity_selected AS (
-  -- Retrieve the entity_id, whether newly inserted or already existing
-  SELECT entity_id
-  FROM entity
-  WHERE name = $1
-),
-location_inserted AS (
-  -- Insert the location for the entity
-  INSERT INTO location (entity_id, created_at, modified_at)
-  SELECT entity_id, now(), now()
-  FROM entity_selected
-  RETURNING id AS location_id
-),
-position_inserted AS (
-  -- Insert the position data for the location
-  INSERT INTO position (location_id, latitude_degrees, longitude_degrees, heading_degrees, altitude_hae_meters, speed_mps)
-  SELECT location_id, $3, $4, $5, $6, $7
-  FROM location_inserted
-  RETURNING id AS position_id
-)
--- Return the IDs of the created/selected entity, location, and position
-SELECT
-  es.entity_id,
-  li.location_id,
-  pi.position_id
-FROM entity_selected es
-LEFT JOIN location_inserted li ON TRUE
-LEFT JOIN position_inserted pi ON TRUE;
+------------------------------------------------------
+-- Location / Position Queries
+------------------------------------------------------
+
+-- name: InsertLocation :one
+INSERT INTO location (entity_id, created_at)
+VALUES ($1, $2)
+RETURNING id;
+
+-- name: InsertPosition :exec
+INSERT INTO position (location_id, latitude_degrees, longitude_degrees, heading_degrees, altitude_hae_meters, speed_mps)
+VALUES ($1, $2, $3, $4, $5, $6);
+
+-- -- name: GetEntityWithLocationAndPosition :many
+-- SELECT 
+--     e.entity_id,
+--     e.name AS entity_name,
+--     p.integration_source,
+--     l.*,
+--     pos.*
+-- FROM entity e
+-- JOIN provenance p ON e.entity_id = p.entity_id
+-- JOIN location l ON e.entity_id = l.entity_id
+-- JOIN position pos ON l.id = pos.location_id
+-- WHERE 
+--     ($1 IS NULL OR e.name = ANY($1::text[])) 
+--     AND ($2 IS NULL OR p.integration_source = ANY($2::text[]));
