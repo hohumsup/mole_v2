@@ -5,25 +5,33 @@ variables:
   POSTGRES_USER: mole_user
   POSTGRES_PASSWORD: secret
   POSTGRES_DB: mole
-  GO_VERSION: "1.23.5"
+  GO_VERSION: "1.23.6"
+  MIGRATE_VERSION: "4.18.1"
 
 services:
   - name: postgis/postgis:16-3.5
     alias: postgres
 
 before_script:
-  - apt-get update && apt-get install -y curl
-  - curl -L https://github.com/golang-migrate/migrate/releases/download/v4.18.1/migrate.linux-amd64.tar.gz | tar xvz
+  - apt-get update && apt-get install -y curl tar
+  - echo "Installing Go $GO_VERSION..."
+  - curl -OL https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz
+  - rm -rf /usr/local/go && tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz
+  - export PATH="/usr/local/go/bin:$PATH"
+  - echo 'export PATH="/usr/local/go/bin:$PATH"' >> ~/.bashrc
+  - go version
+
+  - echo "Installing golang-migrate..."
+  - curl -L https://github.com/golang-migrate/migrate/releases/download/v${MIGRATE_VERSION}/migrate.linux-amd64.tar.gz | tar xvz
   - mv migrate /usr/local/bin/migrate
   - which migrate
-  - echo "Setting up Go..."
-  - apt-get install -y golang-${GO_VERSION}
-  - export PATH="/usr/lib/go-${GO_VERSION}/bin:$PATH"
-  - go version
+
+  - echo "Running database migrations..."
   - make migrateup
 
 test:
   stage: test
-  image: golang:${GO_VERSION}
+  image: ubuntu:latest
   script:
+    - echo "Running tests..."
     - make test
