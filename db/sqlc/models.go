@@ -48,18 +48,14 @@ type GeoDetail struct {
 	GeoEllipse interface{} `json:"geo_ellipse"`
 	// Geospatial ellipsoid representation of the entity.
 	GeoEllipsoid interface{} `json:"geo_ellipsoid"`
-	// Client-provided timestamp for when the geo detail was created
-	CreatedAt time.Time `json:"created_at"`
-	// Server-generated timestamp for when the geo detail was last updated
-	ModifiedAt time.Time `json:"modified_at"`
 }
 
-type Location struct {
-	// Unique ID for the location record
+type Instance struct {
+	// Unique ID for the instance record
 	ID int64 `json:"id"`
 	// Reference to the associated entity
 	EntityID uuid.UUID `json:"entity_id"`
-	// Client-provided timestamp for when the location data was created.
+	// Client-provided timestamp for when the instance data was created.
 	CreatedAt time.Time `json:"created_at"`
 	// Server-generated timestamp for last modification.
 	ModifiedAt time.Time `json:"modified_at"`
@@ -68,8 +64,8 @@ type Location struct {
 type Position struct {
 	// Unique ID for the position record
 	ID int64 `json:"id"`
-	// Reference to the associated location
-	LocationID int64 `json:"location_id"`
+	// Reference to the associated instance
+	InstanceID int64 `json:"instance_id"`
 	// WGS84 geodetic latitude in decimal degrees.
 	LatitudeDegrees float64 `json:"latitude_degrees"`
 	// WGS84 longitude in decimal degrees.
