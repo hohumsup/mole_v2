@@ -74,29 +74,14 @@ DELETE FROM entity
 WHERE entity_id = $1;
 
 ------------------------------------------------------
--- Location / Position Queries
+-- Instance / Position Queries
 ------------------------------------------------------
 
--- name: InsertLocation :one
-INSERT INTO location (entity_id, created_at)
+-- name: InsertInstance :one
+INSERT INTO instance (entity_id, created_at)
 VALUES ($1, $2)
 RETURNING id;
 
 -- name: InsertPosition :exec
-INSERT INTO position (location_id, latitude_degrees, longitude_degrees, heading_degrees, altitude_hae_meters, speed_mps)
+INSERT INTO position (instance_id, latitude_degrees, longitude_degrees, heading_degrees, altitude_hae_meters, speed_mps)
 VALUES ($1, $2, $3, $4, $5, $6);
-
--- -- name: GetEntityWithLocationAndPosition :many
--- SELECT 
---     e.entity_id,
---     e.name AS entity_name,
---     p.integration_source,
---     l.*,
---     pos.*
--- FROM entity e
--- JOIN provenance p ON e.entity_id = p.entity_id
--- JOIN location l ON e.entity_id = l.entity_id
--- JOIN position pos ON l.id = pos.location_id
--- WHERE 
---     ($1 IS NULL OR e.name = ANY($1::text[])) 
---     AND ($2 IS NULL OR p.integration_source = ANY($2::text[]));

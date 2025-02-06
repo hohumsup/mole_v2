@@ -16,34 +16,34 @@ COMMENT ON COLUMN "entity"."name" IS 'Display name for the entity';
 COMMENT ON COLUMN "entity"."description" IS 'Human-readable description';
 
 -------------------------------------------------
--- LOCATION TABLE
+-- INSTANCE TABLE
 -------------------------------------------------
-CREATE TABLE "location" (
+CREATE TABLE "instance" (
   "id" bigserial PRIMARY KEY,
   "entity_id" uuid NOT NULL,
   "created_at" timestamptz NOT NULL,
   "modified_at" timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX ON "location" ("entity_id");
-CREATE INDEX ON "location" ("created_at", "modified_at");
+CREATE INDEX ON "instance" ("entity_id");
+CREATE INDEX ON "instance" ("created_at", "modified_at");
 
-ALTER TABLE "location" 
+ALTER TABLE "instance" 
   ADD FOREIGN KEY ("entity_id") 
     REFERENCES "entity" ("entity_id") 
     ON DELETE CASCADE;
 
-COMMENT ON COLUMN "location"."id" IS 'Unique ID for the location record';
-COMMENT ON COLUMN "location"."entity_id" IS 'Reference to the associated entity';
-COMMENT ON COLUMN "location"."created_at" IS 'Client-provided timestamp for when the location data was created.';
-COMMENT ON COLUMN "location"."modified_at" IS 'Server-generated timestamp for last modification.';
+COMMENT ON COLUMN "instance"."id" IS 'Unique ID for the instance record';
+COMMENT ON COLUMN "instance"."entity_id" IS 'Reference to the associated entity';
+COMMENT ON COLUMN "instance"."created_at" IS 'Client-provided timestamp for when the instance data was created.';
+COMMENT ON COLUMN "instance"."modified_at" IS 'Server-generated timestamp for last modification.';
 
 -------------------------------------------------
 -- POSITION TABLE
 -------------------------------------------------
 CREATE TABLE "position" (
-  "id" bigserial PRIMARY KEY,
-  "location_id" bigint NOT NULL,
+  "position_id" bigserial PRIMARY KEY,
+  "instance_id" bigint NOT NULL,
   "latitude_degrees" double precision NOT NULL,
   "longitude_degrees" double precision NOT NULL,
   "heading_degrees" double precision,
@@ -51,16 +51,16 @@ CREATE TABLE "position" (
   "speed_mps" double precision
 );
 
-CREATE INDEX ON "position" ("location_id");
+CREATE INDEX ON "position" ("instance_id");
 CREATE INDEX ON "position" ("latitude_degrees", "longitude_degrees");
 
 ALTER TABLE "position" 
-  ADD FOREIGN KEY ("location_id") 
-    REFERENCES "location" ("id") 
+  ADD FOREIGN KEY ("instance_id") 
+    REFERENCES "instance" ("id") 
     ON DELETE CASCADE;
 
-COMMENT ON COLUMN "position"."id" IS 'Unique ID for the position record';
-COMMENT ON COLUMN "position"."location_id" IS 'Reference to the associated location';
+COMMENT ON COLUMN "position"."position_id" IS 'Unique ID for the position record';
+COMMENT ON COLUMN "position"."instance_id" IS 'Reference to the associated instance';
 COMMENT ON COLUMN "position"."latitude_degrees" IS 'WGS84 geodetic latitude in decimal degrees.';
 COMMENT ON COLUMN "position"."longitude_degrees" IS 'WGS84 longitude in decimal degrees.';
 COMMENT ON COLUMN "position"."heading_degrees" IS 'Heading in degrees.';
@@ -71,35 +71,31 @@ COMMENT ON COLUMN "position"."speed_mps" IS 'Speed as the magnitude of velocity,
 -- GEO_DETAIL TABLE
 -------------------------------------------------
 CREATE TABLE "geo_detail" (
-  "id" bigserial PRIMARY KEY,
-  "entity_id" uuid NOT NULL,
+  "geo_id" bigserial PRIMARY KEY,
+  "instance_id" bigint NOT NULL,
   "geo_point" geometry,
   "geo_line" geometry,
   "geo_polygon" geometry,
   "geo_ellipse" geometry,
-  "geo_ellipsoid" geometry,
-  "created_at" timestamptz NOT NULL DEFAULT now(),
-  "modified_at" timestamptz NOT NULL DEFAULT now()
+  "geo_ellipsoid" geometry
 );
 
-CREATE INDEX ON "geo_detail" ("entity_id");
+CREATE INDEX ON "geo_detail" ("instance_id");
 CREATE INDEX ON "geo_detail" ("geo_point");
 CREATE INDEX ON "geo_detail" ("geo_polygon");
 
 ALTER TABLE "geo_detail" 
-  ADD FOREIGN KEY ("entity_id") 
-    REFERENCES "entity" ("entity_id") 
+  ADD FOREIGN KEY ("instance_id") 
+    REFERENCES "instance" ("id") 
     ON DELETE CASCADE;
 
-COMMENT ON COLUMN "geo_detail"."id" IS 'Unique ID for the geo detail record';
-COMMENT ON COLUMN "geo_detail"."entity_id" IS 'Reference to the associated entity';
+COMMENT ON COLUMN "geo_detail"."geo_id" IS 'Unique ID for the geo detail record';
+COMMENT ON COLUMN "geo_detail"."instance_id" IS 'Reference to the associated instance';
 COMMENT ON COLUMN "geo_detail"."geo_point" IS 'Geospatial point representation of the entity.';
 COMMENT ON COLUMN "geo_detail"."geo_line" IS 'Geospatial line representation of the entity.';
 COMMENT ON COLUMN "geo_detail"."geo_polygon" IS 'Geospatial polygon representation of the entity.';
 COMMENT ON COLUMN "geo_detail"."geo_ellipse" IS 'Geospatial ellipse representation of the entity.';
 COMMENT ON COLUMN "geo_detail"."geo_ellipsoid" IS 'Geospatial ellipsoid representation of the entity.';
-COMMENT ON COLUMN "geo_detail"."created_at" IS 'Client-provided timestamp for when the geo detail was created';
-COMMENT ON COLUMN "geo_detail"."modified_at" IS 'Server-generated timestamp for when the geo detail was last updated';
 
 -------------------------------------------------
 -- PROVENANCE TABLE

@@ -15,6 +15,7 @@ import (
 )
 
 const createEntity = `-- name: CreateEntity :one
+
 WITH new_entity AS (
   INSERT INTO entity (name, description)
   VALUES ($1, $2)
@@ -46,6 +47,9 @@ type CreateEntityRow struct {
 	IntegrationSource string    `json:"integration_source"`
 }
 
+// ----------------------------------------------------
+// Entity Queries (Appended Below Existing Queries)
+// ----------------------------------------------------
 func (q *Queries) CreateEntity(ctx context.Context, arg CreateEntityParams) (CreateEntityRow, error) {
 	row := q.db.QueryRowContext(ctx, createEntity,
 		arg.Name,
@@ -206,31 +210,35 @@ func (q *Queries) GetEntityByNames(ctx context.Context, name string) ([]GetEntit
 	return items, nil
 }
 
-const insertLocation = `-- name: InsertLocation :one
-INSERT INTO location (entity_id, created_at)
+const insertInstance = `-- name: InsertInstance :one
+
+INSERT INTO instance (entity_id, created_at)
 VALUES ($1, $2)
 RETURNING id
 `
 
-type InsertLocationParams struct {
+type InsertInstanceParams struct {
 	EntityID  uuid.UUID `json:"entity_id"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
-func (q *Queries) InsertLocation(ctx context.Context, arg InsertLocationParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, insertLocation, arg.EntityID, arg.CreatedAt)
+// ----------------------------------------------------
+// Instance / Position Queries
+// ----------------------------------------------------
+func (q *Queries) InsertInstance(ctx context.Context, arg InsertInstanceParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, insertInstance, arg.EntityID, arg.CreatedAt)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
 }
 
 const insertPosition = `-- name: InsertPosition :exec
-INSERT INTO position (location_id, latitude_degrees, longitude_degrees, heading_degrees, altitude_hae_meters, speed_mps)
+INSERT INTO position (instance_id, latitude_degrees, longitude_degrees, heading_degrees, altitude_hae_meters, speed_mps)
 VALUES ($1, $2, $3, $4, $5, $6)
 `
 
 type InsertPositionParams struct {
-	LocationID        int64           `json:"location_id"`
+	InstanceID        int64           `json:"instance_id"`
 	LatitudeDegrees   float64         `json:"latitude_degrees"`
 	LongitudeDegrees  float64         `json:"longitude_degrees"`
 	HeadingDegrees    sql.NullFloat64 `json:"heading_degrees"`
@@ -240,7 +248,7 @@ type InsertPositionParams struct {
 
 func (q *Queries) InsertPosition(ctx context.Context, arg InsertPositionParams) error {
 	_, err := q.db.ExecContext(ctx, insertPosition,
-		arg.LocationID,
+		arg.InstanceID,
 		arg.LatitudeDegrees,
 		arg.LongitudeDegrees,
 		arg.HeadingDegrees,

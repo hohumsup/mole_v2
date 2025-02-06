@@ -237,7 +237,7 @@ func TestDeleteRandomEntity(t *testing.T) {
 	t.Log("Entity deleted:", randomEntity.Name)
 }
 
-func TestCreateAndUpdateEntityWithLocationAndPosition(t *testing.T) {
+func TestCreateAndUpdateEntityWithInstanceAndPosition(t *testing.T) {
 	// Add position data to an existing entity and create an entity with position
 	for _, toggle := range []bool{true, false} {
 		getEntity := CreateEntity(t, toggle)
@@ -270,7 +270,7 @@ func TestCreateAndUpdateEntityWithLocationAndPosition(t *testing.T) {
 		}
 
 		// Insert location
-		locationID, err := testQueries.InsertLocation(context.Background(), InsertLocationParams{
+		locationID, err := testQueries.InsertInstance(context.Background(), InsertInstanceParams{
 			EntityID:  entityID,
 			CreatedAt: time.Now().UTC(),
 		})
@@ -280,7 +280,7 @@ func TestCreateAndUpdateEntityWithLocationAndPosition(t *testing.T) {
 
 		// Hardcoded position values
 		position := InsertPositionParams{
-			LocationID:        locationID,
+			InstanceID:        locationID,
 			LatitudeDegrees:   36.7749,
 			LongitudeDegrees:  -123.4194,
 			HeadingDegrees:    sql.NullFloat64{Float64: 90.0, Valid: true},
@@ -294,6 +294,6 @@ func TestCreateAndUpdateEntityWithLocationAndPosition(t *testing.T) {
 			t.Fatalf("Failed to insert position: %v", err)
 		}
 
-		t.Log("Location and position data created for", entity.Name)
+		t.Log("Instance and position data created for", entity.Name)
 	}
 }
