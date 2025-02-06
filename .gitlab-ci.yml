@@ -16,14 +16,14 @@ before_script:
   - apt-get update && apt-get install -y curl tar
   - echo "Installing Go $GO_VERSION..."
   - curl -OL https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz
-  - rm -rf /usr/local/go && tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz
+  - sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz
   - export PATH="/usr/local/go/bin:$PATH"
   - echo 'export PATH="/usr/local/go/bin:$PATH"' >> ~/.bashrc
   - go version
 
   - echo "Installing golang-migrate..."
   - curl -L https://github.com/golang-migrate/migrate/releases/download/v${MIGRATE_VERSION}/migrate.linux-amd64.tar.gz | tar xvz
-  - mv migrate /usr/local/bin/migrate
+  - sudo mv migrate /usr/local/bin/migrate
   - which migrate
 
   - echo "Running database migrations..."
