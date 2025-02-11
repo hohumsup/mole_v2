@@ -1,6 +1,10 @@
 stages:
   - test
 
+default:
+  tags:
+    - fusion-shared-runner-docker
+
 variables:
   POSTGRES_USER: mole_user
   POSTGRES_PASSWORD: secret
@@ -31,7 +35,7 @@ before_script:
 
 test:
   stage: test
-  image: ubuntu:latest
+  image: ubuntu:22.04
   script:
     - echo "Running tests..."
     - make test
