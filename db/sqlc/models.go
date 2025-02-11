@@ -35,9 +35,9 @@ type Entity struct {
 
 type GeoDetail struct {
 	// Unique ID for the geo detail record
-	ID int64 `json:"id"`
-	// Reference to the associated entity
-	EntityID uuid.UUID `json:"entity_id"`
+	GeoID int64 `json:"geo_id"`
+	// Reference to the associated instance
+	InstanceID int64 `json:"instance_id"`
 	// Geospatial point representation of the entity.
 	GeoPoint interface{} `json:"geo_point"`
 	// Geospatial line representation of the entity.
@@ -63,7 +63,7 @@ type Instance struct {
 
 type Position struct {
 	// Unique ID for the position record
-	ID int64 `json:"id"`
+	PositionID int64 `json:"position_id"`
 	// Reference to the associated instance
 	InstanceID int64 `json:"instance_id"`
 	// WGS84 geodetic latitude in decimal degrees.

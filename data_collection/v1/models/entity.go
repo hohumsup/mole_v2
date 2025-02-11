@@ -23,12 +23,12 @@ type CreateInstance struct {
 }
 
 type CreatePosition struct {
-	InstanceID        int64           `json:"instance_id" binding:"required"`
-	LatitudeDegrees   float64         `json:"latitude_degrees" binding:"required"`
-	LongitudeDegrees  float64         `json:"longitude_degrees" binding:"required"`
-	HeadingDegrees    sql.NullFloat64 `json:"heading_degrees"`     // Nullable
-	AltitudeHaeMeters sql.NullFloat64 `json:"altitude_hae_meters"` // Nullable
-	SpeedMps          sql.NullFloat64 `json:"speed_mps"`           // Nullable
+	InstanceID        int64    `json:"instance_id"`
+	LatitudeDegrees   float64  `json:"latitude_degrees" binding:"required"`
+	LongitudeDegrees  float64  `json:"longitude_degrees" binding:"required"`
+	HeadingDegrees    *float64 `json:"heading_degrees"`     // Nullable
+	AltitudeHaeMeters *float64 `json:"altitude_hae_meters"` // Nullable
+	SpeedMps          *float64 `json:"speed_mps"`           // Nullable
 }
 
 type CreateEntityResponse struct {
