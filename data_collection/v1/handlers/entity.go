@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	converters "mole/data_collection/internal/converters"
 	"mole/data_collection/v1/models"
 	model "mole/data_collection/v1/models"
 	db "mole/db/sqlc"
@@ -113,9 +114,9 @@ func CreateEntity(query *db.Queries) gin.HandlerFunc {
 				InstanceID:        *instanceID,
 				LatitudeDegrees:   req.Position.LatitudeDegrees,
 				LongitudeDegrees:  req.Position.LongitudeDegrees,
-				HeadingDegrees:    req.Position.HeadingDegrees,
-				AltitudeHaeMeters: req.Position.AltitudeHaeMeters,
-				SpeedMps:          req.Position.SpeedMps,
+				HeadingDegrees:    converters.Float64ToNullFloat64(req.Position.HeadingDegrees),
+				AltitudeHaeMeters: converters.Float64ToNullFloat64(req.Position.AltitudeHaeMeters),
+				SpeedMps:          converters.Float64ToNullFloat64(req.Position.SpeedMps),
 			}
 
 			err := query.InsertPosition(context.Background(), positionArg)
