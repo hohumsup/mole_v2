@@ -26,10 +26,22 @@ new_provenance AS (
   SELECT entity_id, $3, $4, $5, now()
   FROM new_entity
   RETURNING entity_id, integration_source
+),
+new_context AS (
+  INSERT INTO context (entity_id, template, entity_type, specific_type, created_at)
+  SELECT 
+    entity_id, 
+    $6,
+    $7,
+    $8,
+    now()
+  FROM new_entity
+  RETURNING entity_id, template
 )
-SELECT e.entity_id, e.name, e.description, p.integration_source
+SELECT e.entity_id, e.name, e.description, p.integration_source, c.template
 FROM new_entity e
 JOIN new_provenance p ON e.entity_id = p.entity_id
+JOIN new_context c ON e.entity_id = c.entity_id
 `
 
 type CreateEntityParams struct {
@@ -38,6 +50,9 @@ type CreateEntityParams struct {
 	DataType          sql.NullString `json:"data_type"`
 	SourceName        sql.NullString `json:"source_name"`
 	IntegrationSource string         `json:"integration_source"`
+	Template          int32          `json:"template"`
+	EntityType        sql.NullString `json:"entity_type"`
+	SpecificType      sql.NullString `json:"specific_type"`
 }
 
 type CreateEntityRow struct {
@@ -45,6 +60,7 @@ type CreateEntityRow struct {
 	Name              string    `json:"name"`
 	Description       string    `json:"description"`
 	IntegrationSource string    `json:"integration_source"`
+	Template          int32     `json:"template"`
 }
 
 // ----------------------------------------------------
@@ -57,6 +73,9 @@ func (q *Queries) CreateEntity(ctx context.Context, arg CreateEntityParams) (Cre
 		arg.DataType,
 		arg.SourceName,
 		arg.IntegrationSource,
+		arg.Template,
+		arg.EntityType,
+		arg.SpecificType,
 	)
 	var i CreateEntityRow
 	err := row.Scan(
@@ -64,6 +83,7 @@ func (q *Queries) CreateEntity(ctx context.Context, arg CreateEntityParams) (Cre
 		&i.Name,
 		&i.Description,
 		&i.IntegrationSource,
+		&i.Template,
 	)
 	return i, err
 }
@@ -137,9 +157,11 @@ SELECT
     e.entity_id, 
     e.name, 
     e.description, 
-    p.integration_source
+    p.integration_source,
+    c.template
 FROM entity e
 JOIN provenance p ON e.entity_id = p.entity_id
+JOIN context c ON e.entity_id = c.entity_id
 WHERE e.name = $1 AND p.integration_source = $2
 LIMIT 1
 `
@@ -154,6 +176,7 @@ type GetEntityByNameAndIntegrationSourceRow struct {
 	Name              string    `json:"name"`
 	Description       string    `json:"description"`
 	IntegrationSource string    `json:"integration_source"`
+	Template          int32     `json:"template"`
 }
 
 func (q *Queries) GetEntityByNameAndIntegrationSource(ctx context.Context, arg GetEntityByNameAndIntegrationSourceParams) (GetEntityByNameAndIntegrationSourceRow, error) {
@@ -164,6 +187,7 @@ func (q *Queries) GetEntityByNameAndIntegrationSource(ctx context.Context, arg G
 		&i.Name,
 		&i.Description,
 		&i.IntegrationSource,
+		&i.Template,
 	)
 	return i, err
 }

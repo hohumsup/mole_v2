@@ -165,6 +165,7 @@ CREATE INDEX ON "context" ("entity_type");
 
 COMMENT ON COLUMN "context"."context_id" IS 'Unique ID for the context record';
 COMMENT ON COLUMN "context"."entity_id" IS 'Reference to the associated entity';
+COMMENT ON COLUMN "context"."template" IS 'Template type for the context record';
 COMMENT ON COLUMN "context"."entity_type" IS 'High-level classification (e.g., ''detection'', ''uav'')';
 COMMENT ON COLUMN "context"."specific_type" IS 'A detailed categorization (e.g., ''radar'', ''fixed-wing'')';
 COMMENT ON COLUMN "context"."created_at" IS 'Timestamp for when the context record was created';

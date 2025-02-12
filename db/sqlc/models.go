@@ -13,13 +13,14 @@ import (
 
 type Context struct {
 	// Unique ID for the context record
-	ID int64 `json:"id"`
+	ContextID int64 `json:"context_id"`
 	// Reference to the associated entity
 	EntityID uuid.UUID `json:"entity_id"`
-	// High-level classification (e.g., 'event-type', 'vehicle', 'sensor')
-	EntityType string `json:"entity_type"`
-	// A detailed categorization or model within the high-level classification (e.g., 'Detection', 'Fixed-wing', 'Weather-station')
-	SpecificType string `json:"specific_type"`
+	Template int32     `json:"template"`
+	// High-level classification (e.g., 'detection', 'uav')
+	EntityType sql.NullString `json:"entity_type"`
+	// A detailed categorization (e.g., 'radar', 'fixed-wing')
+	SpecificType sql.NullString `json:"specific_type"`
 	// Timestamp for when the context record was created
 	CreatedAt time.Time `json:"created_at"`
 }
@@ -93,4 +94,9 @@ type Provenance struct {
 	SourceUpdateTime time.Time `json:"source_update_time"`
 	// Timestamp for when the provenance record was created
 	CreatedAt time.Time `json:"created_at"`
+}
+
+type Template struct {
+	TemplateID int32  `json:"template_id"`
+	Name       string `json:"name"`
 }

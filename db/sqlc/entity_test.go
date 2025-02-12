@@ -34,11 +34,14 @@ func CreateEntity(t *testing.T, random bool) CreateEntityRow {
 		Name:              FormatName(name),
 		Description:       gofakeit.Sentence(5),
 		IntegrationSource: gofakeit.RandomString([]string{"telemetry", "gps"}),
+		Template:          int32(rand.Intn(3) + 1),
 	}
 
 	entityRow, err := testQueries.CreateEntity(context.Background(), arg)
+	t.Log(arg)
 	if err != nil {
 		// If the error is due to a duplicate entity, fetch the existing one
+		t.Log(err)
 		if strings.Contains(err.Error(), "already exists") {
 			t.Log("Duplicate entity detected, fetching existing entity:")
 			t.Log(err)
@@ -56,11 +59,13 @@ func CreateEntity(t *testing.T, random bool) CreateEntityRow {
 			return CreateEntityRow(existingEntity)
 
 		} else {
+			t.Log(entityRow)
 			// For any other error, fail the test
 			require.NoError(t, err)
 		}
 	}
 
+	t.Log(entityRow)
 	require.NoError(t, err)
 	require.NotEmpty(t, entityRow)
 
