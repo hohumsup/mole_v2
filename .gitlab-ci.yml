@@ -17,7 +17,7 @@ services:
     alias: postgres
 
 before_script:
-  - apt-get update && apt-get install -y curl tar build-essential
+  - apt-get update && apt-get install -y curl tar build-essential docker.io
   - echo "Installing Go $GO_VERSION..."
   - curl -OL https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz
   - rm -rf /usr/local/go && tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz
