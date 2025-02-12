@@ -13,10 +13,22 @@ new_provenance AS (
   SELECT entity_id, $3, $4, $5, now()
   FROM new_entity
   RETURNING entity_id, integration_source
+),
+new_context AS (
+  INSERT INTO context (entity_id, template, entity_type, specific_type, created_at)
+  SELECT 
+    entity_id, 
+    $6,
+    $7,
+    $8,
+    now()
+  FROM new_entity
+  RETURNING entity_id, template
 )
-SELECT e.entity_id, e.name, e.description, p.integration_source
+SELECT e.entity_id, e.name, e.description, p.integration_source, c.template
 FROM new_entity e
-JOIN new_provenance p ON e.entity_id = p.entity_id;
+JOIN new_provenance p ON e.entity_id = p.entity_id
+JOIN new_context c ON e.entity_id = c.entity_id;
 
 -- name: GetEntity :one
 SELECT * FROM entity
@@ -27,9 +39,11 @@ SELECT
     e.entity_id, 
     e.name, 
     e.description, 
-    p.integration_source
+    p.integration_source,
+    c.template
 FROM entity e
 JOIN provenance p ON e.entity_id = p.entity_id
+JOIN context c ON e.entity_id = c.entity_id
 WHERE e.name = $1 AND p.integration_source = $2
 LIMIT 1;
 

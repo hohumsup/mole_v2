@@ -127,14 +127,31 @@ COMMENT ON COLUMN "provenance"."source_update_time" IS 'Last modification time a
 COMMENT ON COLUMN "provenance"."created_at" IS 'Timestamp for when the provenance record was created';
 
 -------------------------------------------------
+-- TEMPLATE TABLE
+-------------------------------------------------
+
+CREATE TABLE template (
+  template_id serial PRIMARY KEY,
+  name varchar NOT NULL UNIQUE
+);
+
+INSERT INTO template (template_id, name) VALUES
+  (1, 'Event'),
+  (2, 'Asset'),
+  (3, 'Geo');
+
+-------------------------------------------------
 -- CONTEXT TABLE
 -------------------------------------------------
+
 CREATE TABLE "context" (
-  "id" bigserial PRIMARY KEY,
+  "context_id" bigserial PRIMARY KEY,
   "entity_id" uuid NOT NULL,
-  "entity_type" varchar NOT NULL,
-  "specific_type" varchar NOT NULL,
-  "created_at" timestamptz NOT NULL DEFAULT now()
+  "template" integer NOT NULL REFERENCES template(template_id),
+  "entity_type" varchar,
+  "specific_type" varchar,
+  "created_at" timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT unique_entity_context UNIQUE (entity_id)
 );
 
 ALTER TABLE "context" 
@@ -144,12 +161,12 @@ ALTER TABLE "context"
 
 CREATE INDEX ON "context" ("entity_id");
 CREATE INDEX ON "context" ("entity_type");
-CREATE UNIQUE INDEX ON "context" ("entity_type", "specific_type");
 
-COMMENT ON COLUMN "context"."id" IS 'Unique ID for the context record';
+
+COMMENT ON COLUMN "context"."context_id" IS 'Unique ID for the context record';
 COMMENT ON COLUMN "context"."entity_id" IS 'Reference to the associated entity';
-COMMENT ON COLUMN "context"."entity_type" IS 'High-level classification (e.g., ''event-type'', ''vehicle'', ''sensor'')';
-COMMENT ON COLUMN "context"."specific_type" IS 'A detailed categorization or model within the high-level classification (e.g., ''Detection'', ''Fixed-wing'', ''Weather-station'')';
+COMMENT ON COLUMN "context"."entity_type" IS 'High-level classification (e.g., ''detection'', ''uav'')';
+COMMENT ON COLUMN "context"."specific_type" IS 'A detailed categorization (e.g., ''radar'', ''fixed-wing'')';
 COMMENT ON COLUMN "context"."created_at" IS 'Timestamp for when the context record was created';
 
 -------------------------------------------------
