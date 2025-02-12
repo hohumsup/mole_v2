@@ -23,7 +23,7 @@ sqlc:
 test:
 	go test -v -cover $(shell go list ./...)
 
-FILE ?= dump.sql
+FILE ?= dump.sql # Temporary file to store the database dump
 
 export_db:
 	docker exec postgres pg_dump -U mole_user mole > $(FILE)
