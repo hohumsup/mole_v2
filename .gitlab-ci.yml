@@ -32,7 +32,9 @@ before_script:
   - sleep 5 # wait for postgres to start
   - make create_db
   - echo "Running database migrations..."
-  - make migrate_up
+  # - make migrate_up
+  - migrate -path db/migration -database "postgresql://mole_user:secret@postgres:5432/mole?sslmode=disable" -verbose up
+
 
 
 test:
