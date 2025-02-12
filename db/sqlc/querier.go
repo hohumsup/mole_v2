@@ -12,21 +12,31 @@ import (
 
 type Querier interface {
 	//----------------------------------------------------
-	// Entity Queries (Appended Below Existing Queries)
+	// Entity Queries
 	//----------------------------------------------------
+	// Description: Create a new entity
 	CreateEntity(ctx context.Context, arg CreateEntityParams) (CreateEntityRow, error)
+	// Description: Delete an entity by ID
 	DeleteEntity(ctx context.Context, entityID uuid.UUID) error
+	// Description: Retrieve entities with an array of names
 	GetEntitiesByNames(ctx context.Context, dollar_1 []string) ([]GetEntitiesByNamesRow, error)
+	// Description: Retrieve an entity by ID
 	GetEntity(ctx context.Context, entityID uuid.UUID) (Entity, error)
+	// Description: Retrieve an entity by name and integration source
 	GetEntityByNameAndIntegrationSource(ctx context.Context, arg GetEntityByNameAndIntegrationSourceParams) (GetEntityByNameAndIntegrationSourceRow, error)
+	// Description: Retrieve entities by name
 	GetEntityByNames(ctx context.Context, name string) ([]GetEntityByNamesRow, error)
 	//----------------------------------------------------
 	// Instance / Position Queries
 	//----------------------------------------------------
 	InsertInstance(ctx context.Context, arg InsertInstanceParams) (int64, error)
 	InsertPosition(ctx context.Context, arg InsertPositionParams) error
+	// Description: Retrieve all entities
 	ListEntities(ctx context.Context, arg ListEntitiesParams) ([]ListEntitiesRow, error)
+	// Description: Update an entity by name
 	UpdateEntityByName(ctx context.Context, arg UpdateEntityByNameParams) (Entity, error)
+	// Description: Update an entity's integration source by name and source
+	// TODO: Add Template to UpdateEntityIntegrationSourceByNameAndSource
 	UpdateEntityIntegrationSourceByNameAndSource(ctx context.Context, arg UpdateEntityIntegrationSourceByNameAndSourceParams) (UpdateEntityIntegrationSourceByNameAndSourceRow, error)
 }
 

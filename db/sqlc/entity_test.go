@@ -97,7 +97,7 @@ func TestGetEntity(t *testing.T) {
 }
 
 func TestGetEntityByNameAndIntegrationSource(t *testing.T) {
-	entity1 := CreateEntity(t, false) // Creates "charlie" with a random integration source
+	entity1 := CreateEntity(t, false)
 
 	// Query for the entity using name + integration_source
 	entity2, err := testQueries.GetEntityByNameAndIntegrationSource(

@@ -64,8 +64,9 @@ type CreateEntityRow struct {
 }
 
 // ----------------------------------------------------
-// Entity Queries (Appended Below Existing Queries)
+// Entity Queries
 // ----------------------------------------------------
+// Description: Create a new entity
 func (q *Queries) CreateEntity(ctx context.Context, arg CreateEntityParams) (CreateEntityRow, error) {
 	row := q.db.QueryRowContext(ctx, createEntity,
 		arg.Name,
@@ -93,6 +94,7 @@ DELETE FROM entity
 WHERE entity_id = $1
 `
 
+// Description: Delete an entity by ID
 func (q *Queries) DeleteEntity(ctx context.Context, entityID uuid.UUID) error {
 	_, err := q.db.ExecContext(ctx, deleteEntity, entityID)
 	return err
@@ -112,6 +114,7 @@ type GetEntitiesByNamesRow struct {
 	IntegrationSource string    `json:"integration_source"`
 }
 
+// Description: Retrieve entities with an array of names
 func (q *Queries) GetEntitiesByNames(ctx context.Context, dollar_1 []string) ([]GetEntitiesByNamesRow, error) {
 	rows, err := q.db.QueryContext(ctx, getEntitiesByNames, pq.Array(dollar_1))
 	if err != nil {
@@ -145,6 +148,7 @@ SELECT entity_id, name, description FROM entity
 WHERE entity_id = $1
 `
 
+// Description: Retrieve an entity by ID
 func (q *Queries) GetEntity(ctx context.Context, entityID uuid.UUID) (Entity, error) {
 	row := q.db.QueryRowContext(ctx, getEntity, entityID)
 	var i Entity
@@ -179,6 +183,7 @@ type GetEntityByNameAndIntegrationSourceRow struct {
 	Template          int32     `json:"template"`
 }
 
+// Description: Retrieve an entity by name and integration source
 func (q *Queries) GetEntityByNameAndIntegrationSource(ctx context.Context, arg GetEntityByNameAndIntegrationSourceParams) (GetEntityByNameAndIntegrationSourceRow, error) {
 	row := q.db.QueryRowContext(ctx, getEntityByNameAndIntegrationSource, arg.Name, arg.IntegrationSource)
 	var i GetEntityByNameAndIntegrationSourceRow
@@ -196,7 +201,7 @@ const getEntityByNames = `-- name: GetEntityByNames :many
 SELECT e.entity_id, e.name, e.description, p.integration_source
 FROM entity e
 JOIN provenance p on e.entity_id = p.entity_id
-where e.name = $1
+WHERE e.name = $1
 `
 
 type GetEntityByNamesRow struct {
@@ -206,6 +211,7 @@ type GetEntityByNamesRow struct {
 	IntegrationSource string    `json:"integration_source"`
 }
 
+// Description: Retrieve entities by name
 func (q *Queries) GetEntityByNames(ctx context.Context, name string) ([]GetEntityByNamesRow, error) {
 	rows, err := q.db.QueryContext(ctx, getEntityByNames, name)
 	if err != nil {
@@ -302,6 +308,7 @@ type ListEntitiesRow struct {
 	IntegrationSource string    `json:"integration_source"`
 }
 
+// Description: Retrieve all entities
 func (q *Queries) ListEntities(ctx context.Context, arg ListEntitiesParams) ([]ListEntitiesRow, error) {
 	rows, err := q.db.QueryContext(ctx, listEntities, arg.Limit, arg.Offset)
 	if err != nil {
@@ -345,6 +352,7 @@ type UpdateEntityByNameParams struct {
 	Description string `json:"description"`
 }
 
+// Description: Update an entity by name
 func (q *Queries) UpdateEntityByName(ctx context.Context, arg UpdateEntityByNameParams) (Entity, error) {
 	row := q.db.QueryRowContext(ctx, updateEntityByName, arg.Name, arg.Name_2, arg.Description)
 	var i Entity
@@ -373,6 +381,8 @@ type UpdateEntityIntegrationSourceByNameAndSourceRow struct {
 	IntegrationSource string    `json:"integration_source"`
 }
 
+// Description: Update an entity's integration source by name and source
+// TODO: Add Template to UpdateEntityIntegrationSourceByNameAndSource
 func (q *Queries) UpdateEntityIntegrationSourceByNameAndSource(ctx context.Context, arg UpdateEntityIntegrationSourceByNameAndSourceParams) (UpdateEntityIntegrationSourceByNameAndSourceRow, error) {
 	row := q.db.QueryRowContext(ctx, updateEntityIntegrationSourceByNameAndSource, arg.Name, arg.IntegrationSource, arg.IntegrationSource_2)
 	var i UpdateEntityIntegrationSourceByNameAndSourceRow

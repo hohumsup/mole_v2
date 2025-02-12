@@ -16,7 +16,8 @@ type Context struct {
 	ContextID int64 `json:"context_id"`
 	// Reference to the associated entity
 	EntityID uuid.UUID `json:"entity_id"`
-	Template int32     `json:"template"`
+	// Template type for the context record
+	Template int32 `json:"template"`
 	// High-level classification (e.g., 'detection', 'uav')
 	EntityType sql.NullString `json:"entity_type"`
 	// A detailed categorization (e.g., 'radar', 'fixed-wing')
