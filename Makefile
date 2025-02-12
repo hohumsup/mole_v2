@@ -1,3 +1,6 @@
+DB_HOST ?= 127.0.0.1
+FILE ?= dump.sql # Temporary file to store the database dump
+
 create_postgres:
 	docker run --name postgres -p 5432:5432 -e POSTGRES_USER=mole_user -e POSTGRES_PASSWORD=secret -d postgis/postgis:16-3.5
 
@@ -12,18 +15,16 @@ drop_db:
 	docker exec postgres dropdb mole
 
 migrate_up:
-	migrate -path db/migration -database "postgresql://mole_user:secret@127.0.0.1:5432/mole?sslmode=disable" -verbose up
+	migrate -path db/migration -database "postgresql://mole_user:secret@${DB_HOST}:5432/mole?sslmode=disable" -verbose up
 
 migrate_down:
-	migrate -path db/migration -database "postgresql://mole_user:secret@127.0.0.1:5432/mole?sslmode=disable" -verbose down
+	migrate -path db/migration -database "postgresql://mole_user:secret@${DB_HOST}:5432/mole?sslmode=disable" -verbose down
 
 sqlc:
 	sqlc generate
 
 test:
 	go test -v -cover $(shell go list ./...)
-
-FILE ?= dump.sql # Temporary file to store the database dump
 
 export_db:
 	docker exec postgres pg_dump -U mole_user mole > $(FILE)
