@@ -29,6 +29,7 @@ before_script:
   - mv migrate /usr/local/bin/migrate
   - which migrate
   - make create-postgres
+  - sleep 5 # wait for postgres to start
   - make createdb
   - echo "Running database migrations..."
   - make migrateup
