@@ -6,10 +6,10 @@ remove-postgres:
 	docker rm postgres
 	
 createdb:
-	docker exec -it postgres createdb --username=mole_user --owner=mole_user mole
+	docker exec postgres createdb --username=mole_user --owner=mole_user mole
 
 dropdb:
-	docker exec -it postgres dropdb mole
+	docker exec postgres dropdb mole
 
 migrateup:
 	migrate -path db/migration -database "postgresql://mole_user:secret@localhost:5432/mole?sslmode=disable" -verbose up
