@@ -28,6 +28,7 @@ before_script:
   - curl -L https://github.com/golang-migrate/migrate/releases/download/v${MIGRATE_VERSION}/migrate.linux-amd64.tar.gz | tar xvz
   - mv migrate /usr/local/bin/migrate
   - which migrate
+  - cp $(which migrate) /usr/bin/bash/
   - make create-postgres
   - make createdb
   - echo "Running database migrations..."
