@@ -65,6 +65,7 @@ func CreateEntity(query *db.Queries) gin.HandlerFunc {
 				Name:              req.Name,
 				Description:       req.Description,
 				IntegrationSource: req.IntegrationSource,
+				Template:          req.Template,
 			}
 
 			_, err := query.CreateEntity(context.Background(), arg)
@@ -132,6 +133,7 @@ func CreateEntity(query *db.Queries) gin.HandlerFunc {
 			Name:              entity.Name,
 			Description:       entity.Description,
 			IntegrationSource: entity.IntegrationSource,
+			Template:          entity.Template,
 		}
 
 		if instanceID != nil {

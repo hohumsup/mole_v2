@@ -13,6 +13,7 @@ type CreateEntityRequest struct {
 	DataType          sql.NullString  `json:"data_type"`   // Nullable
 	SourceName        sql.NullString  `json:"source_name"` // Nullable
 	IntegrationSource string          `json:"integration_source"`
+	Template          int32           `json:"template" binding:"required"`
 	CreatedAt         *time.Time      `json:"created_at,omitempty"` // Optional instance timestamp
 	Position          *CreatePosition `json:"position,omitempty"`   // Optional position data
 }
@@ -36,6 +37,7 @@ type CreateEntityResponse struct {
 	Name              string    `json:"name"`
 	Description       string    `json:"description"`
 	IntegrationSource string    `json:"integration_source"`
+	Template          int32     `json:"template"`
 	InstanceID        int64     `json:"instance_id"`
 	CreatedAt         time.Time `json:"created_at"`
 }
