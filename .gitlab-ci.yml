@@ -17,7 +17,7 @@ services:
     alias: postgres
 
 before_script:
-  - apt-get update && apt-get install -y curl tar
+  - apt-get update && apt-get install -y curl tar build-essential
   - echo "Installing Go $GO_VERSION..."
   - curl -OL https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz
   - rm -rf /usr/local/go && tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz
@@ -28,7 +28,7 @@ before_script:
   - curl -L https://github.com/golang-migrate/migrate/releases/download/v${MIGRATE_VERSION}/migrate.linux-amd64.tar.gz | tar xvz
   - mv migrate /usr/local/bin/migrate
   - which migrate
-  - ln -s $(which migrate) /usr/bin/migrate
+  - ln -s $(which migrate) /usr/bin/bash/migrate
   - make create-postgres
   - make createdb
   - echo "Running database migrations..."
