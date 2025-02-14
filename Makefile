@@ -26,6 +26,9 @@ sqlc:
 test:
 	go test -v -cover $(shell go list ./...)
 
+mock:
+	mockgen -source=db/sqlc/querier.go -destination=db/mock/entity.go Entity 
+
 export_db:
 	docker exec postgres pg_dump -U mole_user mole > $(FILE)
 
@@ -35,4 +38,4 @@ load_db:
 server:
 	go run main.go
 
-.PHONY: postgres createdb dropdb migrateup migratedown sqlc test
+.PHONY: postgres createdb dropdb migrateup migratedown sqlc test mock export_db load_db server
