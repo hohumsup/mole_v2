@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -27,6 +28,24 @@ func TestCreateEntityAPI(t *testing.T) {
 	expectedCreateEntityParams := createEntity()
 	expectedGetEntityParams := getEntityByNameAndIntegrationSource()
 	createdEntityID := uuid.New() // mock entity ID since there's isnt an actual DB to generate one
+
+	// instance
+	expectedCreatedAt := time.Now().UTC()
+
+	// position
+	expectedLatitude := 37.7749
+	expectedLongitude := -122.4194
+	expectedHeading := 90.0 // example value
+	expectedAltitude := 100.0
+	expectedSpeed := 10.0
+
+	// TODO: Need to define test cases for the following:
+	// 1. Invalid JSON format
+	// 2. Invalid field type
+	// 3. Invalid request fields
+	// 4. Create entity without instance and position
+	// 5. Create entity with instance but without position
+	// 6. Create entity with instance and position
 
 	gomock.InOrder(
 		// 1. First check: Entity not found.
@@ -56,12 +75,25 @@ func TestCreateEntityAPI(t *testing.T) {
 				Template:          expectedCreateEntityParams.Template,
 			}, nil),
 
-		// mockQuerier.EXPECT().
-		// 	InsertInstance(gomock.Any(), db.InsertInstanceParams{
-		// 		EntityID:  createdEntityID,
-		// 		CreatedAt: time.Now().UTC(),
-		// 	}).
-		// 	Return(db.InsertInstance, nil),
+		// 4. Insert instance (requires a timestamp)
+		mockQuerier.EXPECT().
+			InsertInstance(gomock.Any(), db.InsertInstanceParams{
+				EntityID:  createdEntityID,
+				CreatedAt: expectedCreatedAt,
+			}).
+			Return(int64(1), nil), // mock instance ID
+
+		// 5. Insert position
+		mockQuerier.EXPECT().
+			InsertPosition(gomock.Any(), db.InsertPositionParams{
+				InstanceID:        1,
+				LatitudeDegrees:   expectedLatitude,
+				LongitudeDegrees:  expectedLongitude,
+				HeadingDegrees:    sql.NullFloat64{Float64: expectedHeading, Valid: true},
+				AltitudeHaeMeters: sql.NullFloat64{Float64: expectedAltitude, Valid: true},
+				SpeedMps:          sql.NullFloat64{Float64: expectedSpeed, Valid: true},
+			}).
+			Return(nil),
 	)
 
 	// Initialize Server with mockQuerier
@@ -73,6 +105,14 @@ func TestCreateEntityAPI(t *testing.T) {
 		Description:       expectedCreateEntityParams.Description,
 		IntegrationSource: expectedCreateEntityParams.IntegrationSource,
 		Template:          expectedCreateEntityParams.Template,
+		CreatedAt:         &expectedCreatedAt,
+		Position: &models.CreatePosition{
+			LatitudeDegrees:   expectedLatitude,
+			LongitudeDegrees:  expectedLongitude,
+			HeadingDegrees:    &expectedHeading,
+			AltitudeHaeMeters: &expectedAltitude,
+			SpeedMps:          &expectedSpeed,
+		},
 	}
 	payloadBytes, err := json.Marshal(reqPayload)
 	require.NoError(t, err)
@@ -93,6 +133,7 @@ func TestCreateEntityAPI(t *testing.T) {
 	err = json.Unmarshal(recorder.Body.Bytes(), &resp)
 	require.NoError(t, err)
 	require.Equal(t, createdEntityID, resp.EntityID)
+	require.Equal(t, int64(1), resp.InstanceID)
 	t.Logf("Response Body: %s", recorder.Body.String())
 }
 
