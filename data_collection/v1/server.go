@@ -10,12 +10,12 @@ import (
 
 // Server serves CRUD operations for data collection.
 type Server struct {
-	Query  *db.Queries // Exported field for database queries
+	Query  db.Querier  // Exported field for database queries
 	Router *gin.Engine // Exported field for the Gin router
 }
 
 // DataCollectionServer initializes a new server.
-func DataCollectionServer(query *db.Queries, router *gin.Engine) *Server {
+func DataCollectionServer(query db.Querier, router *gin.Engine) *Server {
 	server := &Server{
 		Query:  query,
 		Router: router,

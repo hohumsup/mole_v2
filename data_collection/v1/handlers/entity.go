@@ -7,7 +7,6 @@ import (
 	"errors"
 	converters "mole/data_collection/internal/converters"
 	"mole/data_collection/v1/models"
-	model "mole/data_collection/v1/models"
 	db "mole/db/sqlc"
 	"net/http"
 
@@ -16,9 +15,9 @@ import (
 )
 
 // CreateEntity returns a Gin handler for creating an entity
-func CreateEntity(query *db.Queries) gin.HandlerFunc {
+func CreateEntity(query db.Querier) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var req model.CreateEntityRequest
+		var req models.CreateEntityRequest
 
 		// TODO: Create a reusable function for JSON validation
 		if err := c.ShouldBindJSON(&req); err != nil {
