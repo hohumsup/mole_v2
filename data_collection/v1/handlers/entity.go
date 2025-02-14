@@ -69,7 +69,8 @@ func CreateEntity(query db.Querier) gin.HandlerFunc {
 
 			_, err := query.CreateEntity(context.Background(), arg)
 			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				// Error due to invalid template
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 				return
 			}
 
@@ -138,6 +139,17 @@ func CreateEntity(query db.Querier) gin.HandlerFunc {
 		if instanceID != nil {
 			response.InstanceID = *instanceID
 			response.CreatedAt = *req.CreatedAt
+		}
+
+		if req.Position != nil {
+			response.Position = &models.CreatePosition{
+				InstanceID:        *instanceID,
+				LatitudeDegrees:   req.Position.LatitudeDegrees,
+				LongitudeDegrees:  req.Position.LongitudeDegrees,
+				HeadingDegrees:    req.Position.HeadingDegrees,
+				AltitudeHaeMeters: req.Position.AltitudeHaeMeters,
+				SpeedMps:          req.Position.SpeedMps,
+			}
 		}
 
 		c.JSON(http.StatusOK, response)

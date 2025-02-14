@@ -33,11 +33,12 @@ type CreatePosition struct {
 }
 
 type CreateEntityResponse struct {
-	EntityID          uuid.UUID `json:"entity_id"`
-	Name              string    `json:"name"`
-	Description       string    `json:"description"`
-	IntegrationSource string    `json:"integration_source"`
-	Template          int32     `json:"template"`
-	InstanceID        int64     `json:"instance_id"`
-	CreatedAt         time.Time `json:"created_at"`
+	EntityID          uuid.UUID       `json:"entity_id"`
+	Name              string          `json:"name"`
+	Description       string          `json:"description"`
+	IntegrationSource string          `json:"integration_source"`
+	Template          int32           `json:"template"`
+	InstanceID        int64           `json:"instance_id"`
+	Position          *CreatePosition `json:"position,omitempty"`
+	CreatedAt         time.Time       `json:"created_at"`
 }
