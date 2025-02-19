@@ -35,6 +35,7 @@ func DataCollectionServer(query db.Querier, router *gin.Engine) *Server {
 func (server *Server) RegisterRoutes() {
 	api := server.Router.Group("/v1/api")
 	api.POST("/entity", handlers.CreateEntity(server.Query))
+	api.GET("/entity/positions", handlers.GetPositions(server.Query))
 }
 
 // Start runs the server on the specified address.

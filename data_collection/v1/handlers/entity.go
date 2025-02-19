@@ -82,9 +82,9 @@ func CreateEntity(query db.Querier) gin.HandlerFunc {
 
 			entityID = entity.EntityID
 
-		} else if err != nil && req.CreatedAt == nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
+			// } else if err != nil && req.CreatedAt == nil {
+			// 	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			// 	return
 		} else {
 			if req.CreatedAt == nil {
 				c.JSON(http.StatusConflict, gin.H{"error": "Entity already exists and no instance creation timestamp was provided"})
@@ -150,6 +150,37 @@ func CreateEntity(query db.Querier) gin.HandlerFunc {
 				AltitudeHaeMeters: req.Position.AltitudeHaeMeters,
 				SpeedMps:          req.Position.SpeedMps,
 			}
+		}
+
+		c.JSON(http.StatusOK, response)
+	}
+}
+
+func GetPositions(query db.Querier) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		positions, err := query.GetPositions(context.Background())
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		var response []models.GetPositions
+		for _, pos := range positions {
+			response = append(response, models.GetPositions{
+				EntityID:          pos.EntityID,
+				Name:              pos.EntityName,
+				IntegrationSource: pos.IntegrationSource,
+				Template:          pos.Template,
+				CreatedAt:         pos.CreatedAt,
+				ModifiedAt:        pos.ModifiedAt,
+				InstanceID:        pos.InstanceID,
+				PositionID:        pos.PositionID,
+				LatitudeDegrees:   pos.LatitudeDegrees,
+				LongitudeDegrees:  pos.LongitudeDegrees,
+				HeadingDegrees:    converters.NullFloat64ToFloat64(pos.HeadingDegrees),
+				AltitudeHaeMeters: converters.NullFloat64ToFloat64(pos.AltitudeHaeMeters),
+				SpeedMps:          converters.NullFloat64ToFloat64(pos.SpeedMps),
+			})
 		}
 
 		c.JSON(http.StatusOK, response)

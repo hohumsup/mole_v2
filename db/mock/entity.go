@@ -131,6 +131,21 @@ func (mr *MockQuerierMockRecorder) GetEntityByNames(ctx, name any) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEntityByNames", reflect.TypeOf((*MockQuerier)(nil).GetEntityByNames), ctx, name)
 }
 
+// GetPositions mocks base method.
+func (m *MockQuerier) GetPositions(ctx context.Context) ([]db.GetPositionsRow, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPositions", ctx)
+	ret0, _ := ret[0].([]db.GetPositionsRow)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPositions indicates an expected call of GetPositions.
+func (mr *MockQuerierMockRecorder) GetPositions(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPositions", reflect.TypeOf((*MockQuerier)(nil).GetPositions), ctx)
+}
+
 // InsertInstance mocks base method.
 func (m *MockQuerier) InsertInstance(ctx context.Context, arg db.InsertInstanceParams) (int64, error) {
 	m.ctrl.T.Helper()
