@@ -26,6 +26,7 @@ type Querier interface {
 	GetEntityByNameAndIntegrationSource(ctx context.Context, arg GetEntityByNameAndIntegrationSourceParams) (GetEntityByNameAndIntegrationSourceRow, error)
 	// Description: Retrieve entities by name
 	GetEntityByNames(ctx context.Context, name string) ([]GetEntityByNamesRow, error)
+	GetPositions(ctx context.Context) ([]GetPositionsRow, error)
 	//----------------------------------------------------
 	// Instance / Position Queries
 	//----------------------------------------------------

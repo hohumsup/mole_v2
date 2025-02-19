@@ -109,3 +109,18 @@ RETURNING id;
 -- name: InsertPosition :exec
 INSERT INTO position (instance_id, latitude_degrees, longitude_degrees, heading_degrees, altitude_hae_meters, speed_mps)
 VALUES ($1, $2, $3, $4, $5, $6);
+
+-- name: GetPositions :many
+SELECT 
+    e.entity_id,
+    e.name AS entity_name,
+    p.integration_source,
+	  c.template,
+    i.*,
+    pos.*
+FROM entity e
+JOIN provenance p ON e.entity_id = p.entity_id
+JOIN context c ON e.entity_id = c.entity_id
+JOIN instance i ON e.entity_id = i.entity_id
+JOIN position pos ON i.id = pos.instance_id
+ORDER by i.created_at;

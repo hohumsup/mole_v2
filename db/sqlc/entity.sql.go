@@ -240,6 +240,79 @@ func (q *Queries) GetEntityByNames(ctx context.Context, name string) ([]GetEntit
 	return items, nil
 }
 
+const getPositions = `-- name: GetPositions :many
+SELECT 
+    e.entity_id,
+    e.name AS entity_name,
+    p.integration_source,
+	  c.template,
+    i.id, i.entity_id, i.created_at, i.modified_at,
+    pos.position_id, pos.instance_id, pos.latitude_degrees, pos.longitude_degrees, pos.heading_degrees, pos.altitude_hae_meters, pos.speed_mps
+FROM entity e
+JOIN provenance p ON e.entity_id = p.entity_id
+JOIN context c ON e.entity_id = c.entity_id
+JOIN instance i ON e.entity_id = i.entity_id
+JOIN position pos ON i.id = pos.instance_id
+ORDER by i.created_at
+`
+
+type GetPositionsRow struct {
+	EntityID          uuid.UUID       `json:"entity_id"`
+	EntityName        string          `json:"entity_name"`
+	IntegrationSource string          `json:"integration_source"`
+	Template          int32           `json:"template"`
+	ID                int64           `json:"id"`
+	EntityID_2        uuid.UUID       `json:"entity_id_2"`
+	CreatedAt         time.Time       `json:"created_at"`
+	ModifiedAt        time.Time       `json:"modified_at"`
+	PositionID        int64           `json:"position_id"`
+	InstanceID        int64           `json:"instance_id"`
+	LatitudeDegrees   float64         `json:"latitude_degrees"`
+	LongitudeDegrees  float64         `json:"longitude_degrees"`
+	HeadingDegrees    sql.NullFloat64 `json:"heading_degrees"`
+	AltitudeHaeMeters sql.NullFloat64 `json:"altitude_hae_meters"`
+	SpeedMps          sql.NullFloat64 `json:"speed_mps"`
+}
+
+func (q *Queries) GetPositions(ctx context.Context) ([]GetPositionsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getPositions)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetPositionsRow{}
+	for rows.Next() {
+		var i GetPositionsRow
+		if err := rows.Scan(
+			&i.EntityID,
+			&i.EntityName,
+			&i.IntegrationSource,
+			&i.Template,
+			&i.ID,
+			&i.EntityID_2,
+			&i.CreatedAt,
+			&i.ModifiedAt,
+			&i.PositionID,
+			&i.InstanceID,
+			&i.LatitudeDegrees,
+			&i.LongitudeDegrees,
+			&i.HeadingDegrees,
+			&i.AltitudeHaeMeters,
+			&i.SpeedMps,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const insertInstance = `-- name: InsertInstance :one
 
 INSERT INTO instance (entity_id, created_at)
