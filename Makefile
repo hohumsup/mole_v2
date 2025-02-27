@@ -2,23 +2,23 @@ DB_HOST ?= 127.0.0.1
 FILE ?= dump.sql # Temporary file to store the database dump
 
 create_postgres:
-	docker run --name postgres -p 5432:5432 -e POSTGRES_USER=mole_user -e POSTGRES_PASSWORD=secret -d postgis/postgis:16-3.5
+	docker run --name gin-postgres -p 5431:5432 -e POSTGRES_USER=mole_user -e POSTGRES_PASSWORD=secret -d postgis/postgis:16-3.5
 
 remove_postgres:
-	docker stop postgres
-	docker rm postgres
+	docker stop gin-postgres
+	docker rm gin-postgres
 	
 create_db:
-	docker exec postgres createdb --username=mole_user --owner=mole_user mole
+	docker exec gin-postgres createdb --username=mole_user --owner=mole_user mole
 
 drop_db:
-	docker exec postgres dropdb mole
+	docker exec gin-postgres dropdb mole
 
 migrate_up:
-	migrate -path db/migration -database "postgresql://mole_user:secret@${DB_HOST}:5432/mole?sslmode=disable" -verbose up
+	migrate -path db/migration -database "postgresql://mole_user:secret@10.100.100.253:5431/mole?sslmode=disable" -verbose up
 
 migrate_down:
-	migrate -path db/migration -database "postgresql://mole_user:secret@${DB_HOST}:5432/mole?sslmode=disable" -verbose down
+	migrate -path db/migration -database "postgresql://mole_user:secret@localhost:5431/mole?sslmode=disable" -verbose down
 
 sqlc:
 	sqlc generate
@@ -30,10 +30,10 @@ mock:
 	mockgen -source=db/sqlc/querier.go -destination=db/mock/entity.go Entity 
 
 export_db:
-	docker exec postgres pg_dump -U mole_user mole > $(FILE)
+	docker exec gin-postgres pg_dump -U mole_user mole > $(FILE)
 
 load_db:
-	cat $(FILE) | docker exec -i postgres psql -U mole_user mole
+	cat $(FILE) | docker exec -i gin-postgres psql -U mole_user mole
 
 server:
 	go run main.go
