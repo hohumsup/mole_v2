@@ -38,14 +38,6 @@ func TestCreateEntityAPI(t *testing.T) {
 	expectedAltitude := 100.0
 	expectedSpeed := 10.0
 
-	// TODO: Need to define test cases for the following:
-	// 1. Invalid JSON format
-	// 2. Invalid field type
-	// 3. Invalid request fields
-	// 4. Create entity without instance and position
-	// 5. Create entity with instance but without position
-	// 6. Create entity with instance and position
-
 	testCases := []struct {
 		name             string
 		rawPayload       string
@@ -190,13 +182,17 @@ func TestCreateEntityAPI(t *testing.T) {
 				Template:          1,
 			},
 			setupMocks: func(ctrl *gomock.Controller, mockQuerier *mock_db.MockQuerier) {
+				expectedCreateEntityParams := createEntity("detection", 1)
 				expectedGetEntityParams := getEntityByNameAndIntegrationSource("detection")
 
 				mockQuerier.EXPECT().
 					GetEntityByNameAndIntegrationSource(gomock.Any(), expectedGetEntityParams).
 					Return(db.GetEntityByNameAndIntegrationSourceRow{
-						EntityID: createdEntityIDEvent,
-						Name:     "detection",
+						EntityID:          createdEntityIDEvent,
+						Name:              expectedCreateEntityParams.Name,
+						Description:       expectedCreateEntityParams.Description,
+						IntegrationSource: expectedCreateEntityParams.IntegrationSource,
+						Template:          expectedCreateEntityParams.Template,
 					}, nil)
 			},
 			expectedHTTPCode: http.StatusConflict,
@@ -309,6 +305,10 @@ func TestCreateEntityAPI(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGetPositionAPI(t *testing.T) {
+
 }
 
 func createEntity(name string, template int32) db.CreateEntityParams {

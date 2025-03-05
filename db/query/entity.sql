@@ -10,8 +10,8 @@ WITH new_entity AS (
   RETURNING *
 ),
 new_provenance AS (
-  INSERT INTO provenance (entity_id, data_type, source_name, integration_source, source_update_time)
-  SELECT entity_id, $3, $4, $5, now()
+  INSERT INTO provenance (entity_id, data_type, integration_source, source_update_time)
+  SELECT entity_id, $3, $4, now()
   FROM new_entity
   RETURNING entity_id, integration_source
 ),
@@ -19,9 +19,9 @@ new_context AS (
   INSERT INTO context (entity_id, template, entity_type, specific_type, created_at)
   SELECT 
     entity_id, 
+    $5,
     $6,
     $7,
-    $8,
     now()
   FROM new_entity
   RETURNING entity_id, template
@@ -102,8 +102,8 @@ WHERE entity_id = $1;
 ------------------------------------------------------
 
 -- name: InsertInstance :one
-INSERT INTO instance (entity_id, created_at)
-VALUES ($1, $2)
+INSERT INTO instance (entity_id, produced_by, created_at, metadata)
+VALUES ($1, $2, $3, $4)
 RETURNING id;
 
 -- name: InsertPosition :exec
