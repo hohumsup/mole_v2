@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	converters "mole/data_collection/internal/converters"
 	"mole/data_collection/v1/models"
 	db "mole/db/sqlc"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/sqlc-dev/pqtype"
 )
 
 // CreateEntity returns a Gin handler for creating an entity
@@ -26,23 +28,23 @@ func CreateEntity(query db.Querier) gin.HandlerFunc {
 
 			switch {
 			case errors.As(err, &syntaxError):
-				// Invalid JSON or malformed
+				// Invalid JSON
 				c.JSON(http.StatusBadRequest, gin.H{
 					"error":   "Invalid JSON format",
-					"details": err.Error(),
+					"details": fmt.Sprintf("Syntax error at byte offset %d: %v", syntaxError.Offset, syntaxError.Error()),
 				})
 				return
 
 			case errors.As(err, &unmarshalTypeError):
-				// Field is present with incorrect type
+				// Field type mismatch
 				c.JSON(http.StatusUnprocessableEntity, gin.H{
 					"error":   "Invalid field type",
-					"details": err.Error(),
+					"details": fmt.Sprintf("Field '%s': expected type %s but got value %v", unmarshalTypeError.Field, unmarshalTypeError.Type, unmarshalTypeError.Value),
 				})
 				return
 
 			default:
-				// Handle unknown field names or missing required fields
+				// Other errors
 				c.JSON(http.StatusUnprocessableEntity, gin.H{
 					"error":   "Invalid request fields",
 					"details": err.Error(),
@@ -94,11 +96,38 @@ func CreateEntity(query db.Querier) gin.HandlerFunc {
 		}
 
 		// Step 2: Check for `created_at` to determine if an instance should be created
-		var instanceID *int64
+		var instanceID *uuid.UUID
 		if req.CreatedAt != nil {
 			instanceArg := db.InsertInstanceParams{
 				EntityID:  entityID,
 				CreatedAt: *req.CreatedAt,
+			}
+
+			if req.Instance != nil {
+				// Convert *string to sql.NullString for ProducedBy.
+				if req.Instance.ProducedBy != nil {
+					instanceArg.ProducedBy = sql.NullString{
+						String: *req.Instance.ProducedBy,
+						Valid:  true,
+					}
+				} else {
+					instanceArg.ProducedBy = sql.NullString{Valid: false}
+				}
+
+				if req.Instance.Metadata != nil {
+					meta, err := converters.ConvertJSONToPQType(*req.Instance.Metadata)
+					if err != nil {
+						c.JSON(http.StatusBadRequest, gin.H{
+							"error":   "Invalid JSON in metadata",
+							"details": err.Error(),
+						})
+						return
+					}
+					instanceArg.Metadata = meta
+				} else {
+					instanceArg.Metadata = pqtype.NullRawMessage{Valid: false}
+				}
+
 			}
 
 			newInstanceID, err := query.InsertInstance(context.Background(), instanceArg)
@@ -174,7 +203,6 @@ func GetPositions(query db.Querier) gin.HandlerFunc {
 				CreatedAt:         pos.CreatedAt,
 				ModifiedAt:        pos.ModifiedAt,
 				InstanceID:        pos.InstanceID,
-				PositionID:        pos.PositionID,
 				LatitudeDegrees:   pos.LatitudeDegrees,
 				LongitudeDegrees:  pos.LongitudeDegrees,
 				HeadingDegrees:    converters.NullFloat64ToFloat64(pos.HeadingDegrees),
