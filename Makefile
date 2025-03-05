@@ -3,6 +3,8 @@ FILE ?= dump.sql # Temporary file to store the database dump
 
 create_postgres:
 	docker run --name gin-postgres -p 5431:5432 -e POSTGRES_USER=mole_user -e POSTGRES_PASSWORD=secret -d postgis/postgis:16-3.5
+	sleep 3 
+	docker exec gin-postgres bash -c "apt update && apt install -y build-essential postgresql-server-dev-16 pgxnclient && pgxn install pg_uuidv7"
 
 remove_postgres:
 	docker stop gin-postgres
@@ -19,6 +21,9 @@ migrate_up:
 
 migrate_down:
 	migrate -path db/migration -database "postgresql://mole_user:secret@localhost:5431/mole?sslmode=disable" -verbose down
+
+migrate_force:
+	migrate -path db/migration -database "postgresql://mole_user:secret@10.100.100.253:5431/mole?sslmode=disable" force 1
 
 sqlc:
 	sqlc generate
