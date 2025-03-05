@@ -30,7 +30,7 @@ type Querier interface {
 	//----------------------------------------------------
 	// Instance / Position Queries
 	//----------------------------------------------------
-	InsertInstance(ctx context.Context, arg InsertInstanceParams) (int64, error)
+	InsertInstance(ctx context.Context, arg InsertInstanceParams) (uuid.UUID, error)
 	InsertPosition(ctx context.Context, arg InsertPositionParams) error
 	// Description: Retrieve all entities
 	ListEntities(ctx context.Context, arg ListEntitiesParams) ([]ListEntitiesRow, error)

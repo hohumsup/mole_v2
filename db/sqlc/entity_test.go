@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"regexp"
 	"strings"
 	"testing"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/brianvoe/gofakeit/v6"
 	"github.com/google/uuid"
+	"github.com/sqlc-dev/pqtype"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/exp/rand"
 )
@@ -262,7 +264,6 @@ func TestCreateAndUpdateEntityWithInstanceAndPosition(t *testing.T) {
 				Name:              getEntity.Name,
 				Description:       getEntity.Description,
 				DataType:          sql.NullString{Valid: false},
-				SourceName:        sql.NullString{Valid: false},
 				IntegrationSource: getEntity.IntegrationSource,
 			})
 			if err != nil {
@@ -274,10 +275,17 @@ func TestCreateAndUpdateEntityWithInstanceAndPosition(t *testing.T) {
 			entityID = entity.EntityID
 		}
 
-		// Insert location
-		locationID, err := testQueries.InsertInstance(context.Background(), InsertInstanceParams{
-			EntityID:  entityID,
-			CreatedAt: time.Now().UTC(),
+		metadataObj := map[string]interface{}{"metadata": "metadat"}
+		metadataJSON, err := json.Marshal(metadataObj)
+		if err != nil {
+			t.Fatalf("Failed to created metadata JSON object")
+		}
+		// Insert Instance
+		instanceID, err := testQueries.InsertInstance(context.Background(), InsertInstanceParams{
+			EntityID:   entityID,
+			ProducedBy: sql.NullString{Valid: false},
+			Metadata:   pqtype.NullRawMessage{RawMessage: metadataJSON, Valid: true},
+			CreatedAt:  time.Now().UTC(),
 		})
 		if err != nil {
 			t.Fatalf("Failed to insert location: %v", err)
@@ -285,7 +293,7 @@ func TestCreateAndUpdateEntityWithInstanceAndPosition(t *testing.T) {
 
 		// Hardcoded position values
 		position := InsertPositionParams{
-			InstanceID:        locationID,
+			InstanceID:        instanceID,
 			LatitudeDegrees:   36.7749,
 			LongitudeDegrees:  -123.4194,
 			HeadingDegrees:    sql.NullFloat64{Float64: 90.0, Valid: true},
@@ -301,4 +309,11 @@ func TestCreateAndUpdateEntityWithInstanceAndPosition(t *testing.T) {
 
 		t.Log("Instance and position data created for", entity.Name)
 	}
+}
+
+func TestGetPositions(t *testing.T) {
+	_, err := testQueries.GetPositions(context.Background())
+	require.NoError(t, err)
+
+	// t.Log("Positions:", positions)
 }
