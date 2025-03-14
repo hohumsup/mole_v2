@@ -110,7 +110,7 @@ RETURNING id;
 INSERT INTO position (instance_id, latitude_degrees, longitude_degrees, heading_degrees, altitude_hae_meters, speed_mps)
 VALUES ($1, $2, $3, $4, $5, $6);
 
--- name: GetPositions :many
+-- name: GetInstances :many
 SELECT 
     e.entity_id,
     e.name AS entity_name,

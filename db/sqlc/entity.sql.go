@@ -239,7 +239,7 @@ func (q *Queries) GetEntityByNames(ctx context.Context, name string) ([]GetEntit
 	return items, nil
 }
 
-const getPositions = `-- name: GetPositions :many
+const getInstances = `-- name: GetInstances :many
 SELECT 
     e.entity_id,
     e.name AS entity_name,
@@ -255,7 +255,7 @@ JOIN position pos ON i.id = pos.instance_id
 ORDER by i.created_at
 `
 
-type GetPositionsRow struct {
+type GetInstancesRow struct {
 	EntityID          uuid.UUID             `json:"entity_id"`
 	EntityName        string                `json:"entity_name"`
 	IntegrationSource string                `json:"integration_source"`
@@ -274,15 +274,15 @@ type GetPositionsRow struct {
 	SpeedMps          sql.NullFloat64       `json:"speed_mps"`
 }
 
-func (q *Queries) GetPositions(ctx context.Context) ([]GetPositionsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getPositions)
+func (q *Queries) GetInstances(ctx context.Context) ([]GetInstancesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getInstances)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []GetPositionsRow{}
+	items := []GetInstancesRow{}
 	for rows.Next() {
-		var i GetPositionsRow
+		var i GetInstancesRow
 		if err := rows.Scan(
 			&i.EntityID,
 			&i.EntityName,

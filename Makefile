@@ -1,6 +1,7 @@
 DB_HOST ?= 127.0.0.1
 FILE ?= dump.sql # Temporary file to store the database dump
 
+# Temp solution, will dockerize the app later
 create_postgres:
 	docker run --name gin-postgres -p 5431:5432 -e POSTGRES_USER=mole_user -e POSTGRES_PASSWORD=secret -d postgis/postgis:16-3.5
 	sleep 3 

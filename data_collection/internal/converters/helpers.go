@@ -23,7 +23,6 @@ func Float64ToNullFloat64(f *float64) sql.NullFloat64 {
 }
 
 func ConvertJSONToPQType(raw json.RawMessage) (pqtype.NullRawMessage, error) {
-	fmt.Println(raw)
 	if len(raw) == 0 {
 		return pqtype.NullRawMessage{Valid: false}, nil
 	}

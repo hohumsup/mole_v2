@@ -311,8 +311,8 @@ func TestCreateAndUpdateEntityWithInstanceAndPosition(t *testing.T) {
 	}
 }
 
-func TestGetPositions(t *testing.T) {
-	_, err := testQueries.GetPositions(context.Background())
+func TestGetInstances(t *testing.T) {
+	_, err := testQueries.GetInstances(context.Background())
 	require.NoError(t, err)
 
 	// t.Log("Positions:", positions)
