@@ -185,17 +185,17 @@ func CreateEntity(query db.Querier) gin.HandlerFunc {
 	}
 }
 
-func GetPositions(query db.Querier) gin.HandlerFunc {
+func GetInstances(query db.Querier) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		positions, err := query.GetPositions(context.Background())
+		positions, err := query.GetInstances(context.Background())
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
-		var response []models.GetPositions
+		var response []models.GetInstances
 		for _, pos := range positions {
-			response = append(response, models.GetPositions{
+			response = append(response, models.GetInstances{
 				EntityID:          pos.EntityID,
 				Name:              pos.EntityName,
 				IntegrationSource: pos.IntegrationSource,
@@ -203,11 +203,13 @@ func GetPositions(query db.Querier) gin.HandlerFunc {
 				CreatedAt:         pos.CreatedAt,
 				ModifiedAt:        pos.ModifiedAt,
 				InstanceID:        pos.InstanceID,
+				ProducedBy:        &pos.ProducedBy.String,
 				LatitudeDegrees:   pos.LatitudeDegrees,
 				LongitudeDegrees:  pos.LongitudeDegrees,
-				HeadingDegrees:    converters.NullFloat64ToFloat64(pos.HeadingDegrees),
-				AltitudeHaeMeters: converters.NullFloat64ToFloat64(pos.AltitudeHaeMeters),
-				SpeedMps:          converters.NullFloat64ToFloat64(pos.SpeedMps),
+				HeadingDegrees:    &pos.HeadingDegrees.Float64,
+				AltitudeHaeMeters: &pos.AltitudeHaeMeters.Float64,
+				SpeedMps:          &pos.SpeedMps.Float64,
+				Metadata:          &pos.Metadata.RawMessage,
 			})
 		}
 
