@@ -5,6 +5,7 @@ import (
 	"mole/data_collection/v1/handlers"
 	db "mole/db/sqlc"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -21,6 +22,14 @@ func DataCollectionServer(query db.Querier, router *gin.Engine) *Server {
 		Router: router,
 	}
 
+	server.Router.Use(cors.New(cors.Config{
+		AllowAllOrigins:  true,
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+	}))
+
 	// Register routes
 	server.RegisterRoutes()
 
@@ -36,6 +45,8 @@ func (server *Server) RegisterRoutes() {
 	api := server.Router.Group("/v1/api")
 	api.POST("/entity", handlers.CreateEntity(server.Query))
 	api.GET("/entity/instances", handlers.GetInstances(server.Query))
+	api.GET("/entity/instances/latest", handlers.GetLatestInstances(server.Query))
+	api.GET("/entity/instances/historical", handlers.GetHistoricalInstances(server.Query))
 }
 
 // Start runs the server on the specified address.

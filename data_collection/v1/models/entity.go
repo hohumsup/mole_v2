@@ -63,3 +63,27 @@ type GetInstances struct {
 	SpeedMps          *float64         `json:"speed_mps"`
 	Metadata          *json.RawMessage `json:"metadata"`
 }
+
+// GetLatestInstancesResponse defines the JSON response for the latest instance endpoint.
+type GetLatestInstancesResponse struct {
+	InstanceID        uuid.UUID `json:"instance_id"`
+	EntityID          uuid.UUID `json:"entity_id"`
+	ProducedBy        string    `json:"produced_by"` // Converts sql.NullString to string (empty if null)
+	IntegrationSource string    `json:"integration_source"`
+	CreatedAt         time.Time `json:"created_at"`
+	ModifiedAt        time.Time `json:"modified_at"`
+	Metadata          string    `json:"metadata"` // You can unmarshal the JSON as a string; adjust if you prefer a structured type
+	Name              string    `json:"name"`
+}
+
+// GetHistoricalInstancesResponse defines the JSON response for the historical (aggregated) endpoint.
+type GetHistoricalInstance struct {
+	InstanceID        uuid.UUID       `json:"instance_id"`
+	EntityID          uuid.UUID       `json:"entity_id"`
+	ProducedBy        string          `json:"produced_by"` // Adjust if using sql.NullString
+	IntegrationSource string          `json:"integration_source"`
+	CreatedAt         time.Time       `json:"created_at"`
+	ModifiedAt        time.Time       `json:"modified_at"`
+	Metadata          json.RawMessage `json:"metadata"` // Adjust if using a different JSON type
+	EntityName        string          `json:"entity_name"`
+}
