@@ -1,7 +1,8 @@
 -- Enable necessary extensions
-CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS pg_uuidv7;
+-- CREATE EXTENSION IF NOT EXISTS pg_uuidv7;
+CREATE EXTENSION IF NOT EXISTS postgis;
+CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;
 
 -------------------------------------------------
 -- ENTITY TABLE
@@ -25,12 +26,13 @@ COMMENT ON COLUMN "entity"."description" IS 'Descriptive information providing c
 -- INSTANCE TABLE
 -------------------------------------------------
 CREATE TABLE "instance" (
-  "id" uuid PRIMARY KEY DEFAULT uuid_generate_v7(),
+  "instance_id" uuid NOT NULL DEFAULT uuid_generate_v1(),
   "entity_id" uuid NOT NULL,
   "produced_by" varchar,
   "created_at" timestamptz NOT NULL,
   "modified_at" timestamptz NOT NULL DEFAULT now(),
-  "metadata" jsonb
+  "metadata" jsonb,
+  PRIMARY KEY ("instance_id", "created_at")
 );
 
 CREATE INDEX ON "instance" ("entity_id");
@@ -41,11 +43,15 @@ ALTER TABLE "instance"
     REFERENCES "entity" ("entity_id") 
     ON DELETE CASCADE;
 
+-- Convert the instance table into a hypertable using created_at as the time column
+SELECT create_hypertable('instance', 'created_at');
+
+
 COMMENT ON TABLE "instance" IS 
   'Represents a specific event or occurrence associated with an entity within the Common Operational Picture (COP). 
    Instances capture real-time or recorded data, including asset state, sensor readings, and relevant experimental details. 
    This table serves as the core unit for situational awareness and data evaluation.';
-COMMENT ON COLUMN "instance"."id" IS 'Unique identifier for the instance record.';
+COMMENT ON COLUMN "instance"."instance_id" IS 'Unique identifier for the instance record.';
 COMMENT ON COLUMN "instance"."entity_id" IS 'Reference to the associated entity.';
 COMMENT ON COLUMN "instance"."produced_by" IS 'Identifier of the system or entity that generated this instance.';
 COMMENT ON COLUMN "instance"."created_at" IS 'Timestamp (provided by the client) indicating when the instance data was recorded.';
@@ -57,20 +63,25 @@ COMMENT ON COLUMN "instance"."metadata" IS 'A JSON object containing additional 
 -------------------------------------------------
 CREATE TABLE "position" (
   "instance_id" uuid NOT NULL,
+  "instance_created_at" timestamptz NOT NULL,  -- This stores the same value as instance.created_at
   "latitude_degrees" double precision NOT NULL,
   "longitude_degrees" double precision NOT NULL,
   "heading_degrees" double precision,
   "altitude_hae_meters" double precision,
   "speed_mps" double precision
 );
+
 CREATE INDEX ON "position" ("latitude_degrees", "longitude_degrees");
 
-ALTER TABLE "position" 
-  ADD FOREIGN KEY ("instance_id") 
-    REFERENCES "instance" ("id") 
-    ON DELETE CASCADE;
+ALTER TABLE "position" DROP CONSTRAINT IF EXISTS position_instance_fk;
 
-COMMENT ON COLUMN "position"."instance_id" IS 'Reference to the associated instance';
+-- ALTER TABLE "position" 
+--   ADD CONSTRAINT position_instance_fk
+--   FOREIGN KEY ("instance_id", "instance_created_at")
+--     REFERENCES "instance" ("instance_id", "created_at")
+--     ON DELETE CASCADE
+
+COMMENT ON COLUMN "position"."instance_id" IS 'Reference to the associated instance.';
 COMMENT ON COLUMN "position"."latitude_degrees" IS 'WGS84 geodetic latitude in decimal degrees.';
 COMMENT ON COLUMN "position"."longitude_degrees" IS 'WGS84 longitude in decimal degrees.';
 COMMENT ON COLUMN "position"."heading_degrees" IS 'Heading in degrees.';
@@ -80,8 +91,10 @@ COMMENT ON COLUMN "position"."speed_mps" IS 'Speed as the magnitude of velocity,
 -------------------------------------------------
 -- GEO_DETAIL TABLE (1-to-1 relationship with Instance)
 -------------------------------------------------
+-- Removed instance_created_at column, now referencing only instance_id
 CREATE TABLE "geo_detail" (
   "instance_id" uuid NOT NULL,
+  "instance_created_at" timestamptz NOT NULL,  -- Must match instance.created_at
   "geo_point" geometry,
   "geo_line" geometry,
   "geo_polygon" geometry,
@@ -89,16 +102,17 @@ CREATE TABLE "geo_detail" (
   "geo_ellipsoid" geometry
 );
 
-CREATE INDEX ON "geo_detail" ("instance_id");
+CREATE INDEX ON "geo_detail" ("instance_id", "instance_created_at");
 CREATE INDEX ON "geo_detail" ("geo_point");
 CREATE INDEX ON "geo_detail" ("geo_polygon");
 
 ALTER TABLE "geo_detail" 
-  ADD FOREIGN KEY ("instance_id") 
-    REFERENCES "instance" ("id") 
+  ADD FOREIGN KEY ("instance_id", "instance_created_at")
+    REFERENCES "instance" ("instance_id", "created_at")
     ON DELETE CASCADE;
 
-COMMENT ON COLUMN "geo_detail"."instance_id" IS 'Reference to the associated instance';
+
+COMMENT ON COLUMN "geo_detail"."instance_id" IS 'Reference to the associated instance.';
 COMMENT ON COLUMN "geo_detail"."geo_point" IS 'Geospatial point representation of the entity.';
 COMMENT ON COLUMN "geo_detail"."geo_line" IS 'Geospatial line representation of the entity.';
 COMMENT ON COLUMN "geo_detail"."geo_polygon" IS 'Geospatial polygon representation of the entity.';
@@ -109,7 +123,7 @@ COMMENT ON COLUMN "geo_detail"."geo_ellipsoid" IS 'Geospatial ellipsoid represen
 -- PROVENANCE TABLE
 -------------------------------------------------
 CREATE TABLE "provenance" (
-  "id" bigserial PRIMARY KEY,
+  "provenance_id" bigserial PRIMARY KEY,
   "entity_id" uuid NOT NULL,
   "data_type" varchar,
   "integration_source" varchar NOT NULL,
@@ -125,7 +139,7 @@ ALTER TABLE "provenance"
 CREATE INDEX ON "provenance" ("entity_id");
 CREATE INDEX ON "provenance" ("source_update_time");
 
-COMMENT ON COLUMN "provenance"."id" IS 'Unique ID for the provenance record';
+COMMENT ON COLUMN "provenance"."provenance_id" IS 'Unique ID for the provenance record';
 COMMENT ON COLUMN "provenance"."entity_id" IS 'Reference to the entity associated with this provenance record';
 COMMENT ON COLUMN "provenance"."data_type" IS 'Optional name or identifier for the source system (e.g., ''gps'', ''telemetry'')';
 COMMENT ON COLUMN "provenance"."integration_source" IS 'Integration source used for which system provided the data (e.g., ''TAK'')';
@@ -135,7 +149,6 @@ COMMENT ON COLUMN "provenance"."created_at" IS 'Timestamp for when the provenanc
 -------------------------------------------------
 -- TEMPLATE TABLE
 -------------------------------------------------
-
 CREATE TABLE template (
   template_id serial PRIMARY KEY,
   name varchar NOT NULL UNIQUE
@@ -149,7 +162,6 @@ INSERT INTO template (template_id, name) VALUES
 -------------------------------------------------
 -- CONTEXT TABLE
 -------------------------------------------------
-
 CREATE TABLE "context" (
   "context_id" bigserial PRIMARY KEY,
   "entity_id" uuid NOT NULL,
@@ -168,7 +180,6 @@ ALTER TABLE "context"
 CREATE INDEX ON "context" ("entity_id");
 CREATE INDEX ON "context" ("entity_type");
 
-
 COMMENT ON COLUMN "context"."context_id" IS 'Unique ID for the context record';
 COMMENT ON COLUMN "context"."entity_id" IS 'Reference to the associated entity';
 COMMENT ON COLUMN "context"."template" IS 'Template type for the context record';
@@ -177,7 +188,7 @@ COMMENT ON COLUMN "context"."specific_type" IS 'A detailed categorization (e.g.,
 COMMENT ON COLUMN "context"."created_at" IS 'Timestamp for when the context record was created';
 
 -------------------------------------------------
--- TRIGGER FUNCTION TO ENFORCE UNIQUE (entity.name, integration_source)
+-- TRIGGER FUNCTION TO ENFORCE UNIQUENESS (entity.name, integration_source)
 -------------------------------------------------
 CREATE OR REPLACE FUNCTION check_unique_entity_name_integration_func()
 RETURNS trigger AS $$
@@ -188,8 +199,7 @@ BEGIN
     -- Get the entity's name for the given entity_id from the new provenance record.
     SELECT name INTO current_name FROM entity WHERE entity_id = NEW.entity_id;
     
-    -- Count any existing provenance records (joined with their entities) that share the same entity name
-    -- and the same integration_source, but with a different entity_id.
+    -- Get duplicate count for entity and integration_source
     SELECT count(*) INTO duplicate_count
     FROM entity e
     JOIN provenance p ON e.entity_id = p.entity_id
@@ -205,7 +215,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -------------------------------------------------
--- TRIGGER ON PROVENANCE TABLE TO ENFORCE UNIQUENESS OF (entity.name, integration_source)
+-- TRIGGER ON PROVENANCE TABLE TO ENFORCE UNIQUENESS (entity.name, integration_source)
 -------------------------------------------------
 CREATE TRIGGER check_unique_entity_name_integration_trigger
 BEFORE INSERT OR UPDATE ON provenance
