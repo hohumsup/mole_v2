@@ -41,8 +41,9 @@ type Entity struct {
 }
 
 type GeoDetail struct {
-	// Reference to the associated instance
-	InstanceID uuid.UUID `json:"instance_id"`
+	// Reference to the associated instance.
+	InstanceID        uuid.UUID `json:"instance_id"`
+	InstanceCreatedAt time.Time `json:"instance_created_at"`
 	// Geospatial point representation of the entity.
 	GeoPoint interface{} `json:"geo_point"`
 	// Geospatial line representation of the entity.
@@ -61,7 +62,7 @@ type GeoDetail struct {
 //	This table serves as the core unit for situational awareness and data evaluation.
 type Instance struct {
 	// Unique identifier for the instance record.
-	ID uuid.UUID `json:"id"`
+	InstanceID uuid.UUID `json:"instance_id"`
 	// Reference to the associated entity.
 	EntityID uuid.UUID `json:"entity_id"`
 	// Identifier of the system or entity that generated this instance.
@@ -75,8 +76,9 @@ type Instance struct {
 }
 
 type Position struct {
-	// Reference to the associated instance
-	InstanceID uuid.UUID `json:"instance_id"`
+	// Reference to the associated instance.
+	InstanceID        uuid.UUID `json:"instance_id"`
+	InstanceCreatedAt time.Time `json:"instance_created_at"`
 	// WGS84 geodetic latitude in decimal degrees.
 	LatitudeDegrees float64 `json:"latitude_degrees"`
 	// WGS84 longitude in decimal degrees.
@@ -91,7 +93,7 @@ type Position struct {
 
 type Provenance struct {
 	// Unique ID for the provenance record
-	ID int64 `json:"id"`
+	ProvenanceID int64 `json:"provenance_id"`
 	// Reference to the entity associated with this provenance record
 	EntityID uuid.UUID `json:"entity_id"`
 	// Optional name or identifier for the source system (e.g., 'gps', 'telemetry')

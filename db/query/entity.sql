@@ -104,23 +104,67 @@ WHERE entity_id = $1;
 -- name: InsertInstance :one
 INSERT INTO instance (entity_id, produced_by, created_at, metadata)
 VALUES ($1, $2, $3, $4)
-RETURNING id;
+RETURNING instance_id, created_at;
 
 -- name: InsertPosition :exec
-INSERT INTO position (instance_id, latitude_degrees, longitude_degrees, heading_degrees, altitude_hae_meters, speed_mps)
-VALUES ($1, $2, $3, $4, $5, $6);
+INSERT INTO position (instance_id, instance_created_at, latitude_degrees, longitude_degrees, heading_degrees, altitude_hae_meters, speed_mps)
+VALUES ($1, $2, $3, $4, $5, $6, $7);
 
 -- name: GetInstances :many
 SELECT 
-    e.entity_id,
-    e.name AS entity_name,
-    p.integration_source,
-	  c.template,
-    i.*,
-    pos.*
+  e.entity_id,
+  e.name AS entity_name,
+  p.integration_source,
+  c.template,
+  i.instance_id AS instance_id,
+  i.entity_id AS instance_entity_id,
+  i.produced_by,
+  i.created_at AS instance_created_at,
+  i.modified_at,
+  i.metadata,
+  pos.instance_id AS position_instance_id,
+  pos.instance_created_at AS position_created_at,
+  pos.latitude_degrees,
+  pos.longitude_degrees,
+  pos.heading_degrees,
+  pos.altitude_hae_meters,
+  pos.speed_mps
 FROM entity e
 JOIN provenance p ON e.entity_id = p.entity_id
 JOIN context c ON e.entity_id = c.entity_id
 JOIN instance i ON e.entity_id = i.entity_id
-JOIN position pos ON i.id = pos.instance_id
-ORDER by i.created_at;
+JOIN position pos ON i.instance_id = pos.instance_id
+                 AND i.created_at = pos.instance_created_at
+ORDER BY i.created_at;
+
+-- name: GetHistoricalInstances :many
+SELECT 
+  i.instance_id,
+  i.entity_id,
+  p.integration_source,
+  i.produced_by,
+  i.created_at,
+  i.modified_at,
+  i.metadata,
+  e.name AS entity_name
+FROM instance i
+JOIN entity e ON i.entity_id = e.entity_id
+JOIN provenance p ON e.entity_id = p.entity_id
+WHERE i.modified_at >= NOW() - $1::interval
+ORDER BY i.modified_at;
+
+
+-- name: GetLatestInstances :many
+SELECT DISTINCT ON (i.entity_id) 
+  i.instance_id,
+  i.entity_id,
+  p.integration_source,
+  i.produced_by,
+  i.created_at,
+  i.modified_at,
+  i.metadata,
+  e.name
+FROM instance i
+JOIN entity e ON i.entity_id = e.entity_id
+JOIN provenance p ON e.entity_id = p.entity_id
+ORDER BY i.entity_id, i.created_at DESC;

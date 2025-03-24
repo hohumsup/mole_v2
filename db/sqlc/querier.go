@@ -26,11 +26,13 @@ type Querier interface {
 	GetEntityByNameAndIntegrationSource(ctx context.Context, arg GetEntityByNameAndIntegrationSourceParams) (GetEntityByNameAndIntegrationSourceRow, error)
 	// Description: Retrieve entities by name
 	GetEntityByNames(ctx context.Context, name string) ([]GetEntityByNamesRow, error)
+	GetHistoricalInstances(ctx context.Context, dollar_1 int64) ([]GetHistoricalInstancesRow, error)
 	GetInstances(ctx context.Context) ([]GetInstancesRow, error)
+	GetLatestInstances(ctx context.Context) ([]GetLatestInstancesRow, error)
 	//----------------------------------------------------
 	// Instance / Position Queries
 	//----------------------------------------------------
-	InsertInstance(ctx context.Context, arg InsertInstanceParams) (uuid.UUID, error)
+	InsertInstance(ctx context.Context, arg InsertInstanceParams) (InsertInstanceRow, error)
 	InsertPosition(ctx context.Context, arg InsertPositionParams) error
 	// Description: Retrieve all entities
 	ListEntities(ctx context.Context, arg ListEntitiesParams) ([]ListEntitiesRow, error)
