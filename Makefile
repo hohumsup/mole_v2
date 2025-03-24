@@ -1,11 +1,10 @@
 DB_HOST ?= 127.0.0.1
 FILE ?= dump.sql # Temporary file to store the database dump
 
-# Temp solution, will dockerize the app later
 create_postgres:
-	docker run --name gin-postgres -p 5431:5432 -e POSTGRES_USER=mole_user -e POSTGRES_PASSWORD=secret -d postgis/postgis:16-3.5
-	sleep 3 
-	docker exec gin-postgres bash -c "apt update && apt install -y build-essential postgresql-server-dev-16 pgxnclient && pgxn install pg_uuidv7"
+	docker run --name gin-postgres -p 5431:5432 -e POSTGRES_USER=mole_user -e POSTGRES_PASSWORD=secret -d timescale/timescaledb-ha:pg17
+# sleep 3 
+# docker exec gin-postgres bash -c "apt update && apt install -y build-essential postgresql-server-dev-16 pgxnclient && pgxn install pg_uuidv7"
 
 remove_postgres:
 	docker stop gin-postgres
@@ -36,10 +35,14 @@ mock:
 	mockgen -source=db/sqlc/querier.go -destination=db/mock/entity.go Entity 
 
 export_db:
-	docker exec gin-postgres pg_dump -U mole_user mole > $(FILE)
+	docker exec gin-postgres pg_dump -U mole_user -Fc \
+	  --exclude-schema=_timescaledb_internal \
+	  --exclude-schema=_timescaledb_catalog \
+	  --exclude-schema=_timescaledb_config \
+	  mole > $(FILE)
 
 load_db:
-	cat $(FILE) | docker exec -i gin-postgres psql -U mole_user mole
+	docker exec -i gin-postgres pg_restore -U mole_user  -d mole < $(FILE)
 
 server:
 	go run main.go
