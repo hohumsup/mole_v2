@@ -131,6 +131,21 @@ func (mr *MockQuerierMockRecorder) GetEntityByNames(ctx, name any) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEntityByNames", reflect.TypeOf((*MockQuerier)(nil).GetEntityByNames), ctx, name)
 }
 
+// GetHistoricalInstances mocks base method.
+func (m *MockQuerier) GetHistoricalInstances(ctx context.Context, dollar_1 int64) ([]db.GetHistoricalInstancesRow, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetHistoricalInstances", ctx, dollar_1)
+	ret0, _ := ret[0].([]db.GetHistoricalInstancesRow)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetHistoricalInstances indicates an expected call of GetHistoricalInstances.
+func (mr *MockQuerierMockRecorder) GetHistoricalInstances(ctx, dollar_1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHistoricalInstances", reflect.TypeOf((*MockQuerier)(nil).GetHistoricalInstances), ctx, dollar_1)
+}
+
 // GetInstances mocks base method.
 func (m *MockQuerier) GetInstances(ctx context.Context) ([]db.GetInstancesRow, error) {
 	m.ctrl.T.Helper()
@@ -146,11 +161,26 @@ func (mr *MockQuerierMockRecorder) GetInstances(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInstances", reflect.TypeOf((*MockQuerier)(nil).GetInstances), ctx)
 }
 
+// GetLatestInstances mocks base method.
+func (m *MockQuerier) GetLatestInstances(ctx context.Context) ([]db.GetLatestInstancesRow, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetLatestInstances", ctx)
+	ret0, _ := ret[0].([]db.GetLatestInstancesRow)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetLatestInstances indicates an expected call of GetLatestInstances.
+func (mr *MockQuerierMockRecorder) GetLatestInstances(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestInstances", reflect.TypeOf((*MockQuerier)(nil).GetLatestInstances), ctx)
+}
+
 // InsertInstance mocks base method.
-func (m *MockQuerier) InsertInstance(ctx context.Context, arg db.InsertInstanceParams) (uuid.UUID, error) {
+func (m *MockQuerier) InsertInstance(ctx context.Context, arg db.InsertInstanceParams) (db.InsertInstanceRow, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "InsertInstance", ctx, arg)
-	ret0, _ := ret[0].(uuid.UUID)
+	ret0, _ := ret[0].(db.InsertInstanceRow)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

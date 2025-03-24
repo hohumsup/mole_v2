@@ -278,22 +278,26 @@ func TestCreateAndUpdateEntityWithInstanceAndPosition(t *testing.T) {
 		metadataObj := map[string]interface{}{"metadata": "metadat"}
 		metadataJSON, err := json.Marshal(metadataObj)
 		if err != nil {
-			t.Fatalf("Failed to created metadata JSON object")
+			t.Fatalf("Failed to create metadata JSON object: %v", err)
 		}
-		// Insert Instance
-		instanceID, err := testQueries.InsertInstance(context.Background(), InsertInstanceParams{
+		// Insert Instance and capture composite return values
+		newInstance, err := testQueries.InsertInstance(context.Background(), InsertInstanceParams{
 			EntityID:   entityID,
 			ProducedBy: sql.NullString{Valid: false},
 			Metadata:   pqtype.NullRawMessage{RawMessage: metadataJSON, Valid: true},
 			CreatedAt:  time.Now().UTC(),
 		})
 		if err != nil {
-			t.Fatalf("Failed to insert location: %v", err)
+			t.Fatalf("Failed to insert instance: %v", err)
 		}
+		// Extract InstanceID and CreatedAt from the returned row.
+		instanceID := newInstance.InstanceID
+		instanceCreatedAt := newInstance.CreatedAt
 
-		// Hardcoded position values
+		// Hardcoded position values with composite key values.
 		position := InsertPositionParams{
 			InstanceID:        instanceID,
+			InstanceCreatedAt: instanceCreatedAt,
 			LatitudeDegrees:   36.7749,
 			LongitudeDegrees:  -123.4194,
 			HeadingDegrees:    sql.NullFloat64{Float64: 90.0, Valid: true},
@@ -301,7 +305,7 @@ func TestCreateAndUpdateEntityWithInstanceAndPosition(t *testing.T) {
 			SpeedMps:          sql.NullFloat64{Float64: 22.0, Valid: true},
 		}
 
-		// Insert position
+		// Insert position using the composite key values.
 		err = testQueries.InsertPosition(context.Background(), position)
 		if err != nil {
 			t.Fatalf("Failed to insert position: %v", err)

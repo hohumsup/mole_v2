@@ -239,39 +239,112 @@ func (q *Queries) GetEntityByNames(ctx context.Context, name string) ([]GetEntit
 	return items, nil
 }
 
-const getInstances = `-- name: GetInstances :many
+const getHistoricalInstances = `-- name: GetHistoricalInstances :many
 SELECT 
-    e.entity_id,
-    e.name AS entity_name,
-    p.integration_source,
-	  c.template,
-    i.id, i.entity_id, i.produced_by, i.created_at, i.modified_at, i.metadata,
-    pos.instance_id, pos.latitude_degrees, pos.longitude_degrees, pos.heading_degrees, pos.altitude_hae_meters, pos.speed_mps
-FROM entity e
+  i.instance_id,
+  i.entity_id,
+  p.integration_source,
+  i.produced_by,
+  i.created_at,
+  i.modified_at,
+  i.metadata,
+  e.name AS entity_name
+FROM instance i
+JOIN entity e ON i.entity_id = e.entity_id
 JOIN provenance p ON e.entity_id = p.entity_id
-JOIN context c ON e.entity_id = c.entity_id
-JOIN instance i ON e.entity_id = i.entity_id
-JOIN position pos ON i.id = pos.instance_id
-ORDER by i.created_at
+WHERE i.modified_at >= NOW() - $1::interval
+ORDER BY i.modified_at
 `
 
-type GetInstancesRow struct {
+type GetHistoricalInstancesRow struct {
+	InstanceID        uuid.UUID             `json:"instance_id"`
 	EntityID          uuid.UUID             `json:"entity_id"`
-	EntityName        string                `json:"entity_name"`
 	IntegrationSource string                `json:"integration_source"`
-	Template          int32                 `json:"template"`
-	ID                uuid.UUID             `json:"id"`
-	EntityID_2        uuid.UUID             `json:"entity_id_2"`
 	ProducedBy        sql.NullString        `json:"produced_by"`
 	CreatedAt         time.Time             `json:"created_at"`
 	ModifiedAt        time.Time             `json:"modified_at"`
 	Metadata          pqtype.NullRawMessage `json:"metadata"`
-	InstanceID        uuid.UUID             `json:"instance_id"`
-	LatitudeDegrees   float64               `json:"latitude_degrees"`
-	LongitudeDegrees  float64               `json:"longitude_degrees"`
-	HeadingDegrees    sql.NullFloat64       `json:"heading_degrees"`
-	AltitudeHaeMeters sql.NullFloat64       `json:"altitude_hae_meters"`
-	SpeedMps          sql.NullFloat64       `json:"speed_mps"`
+	EntityName        string                `json:"entity_name"`
+}
+
+func (q *Queries) GetHistoricalInstances(ctx context.Context, dollar_1 int64) ([]GetHistoricalInstancesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getHistoricalInstances, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetHistoricalInstancesRow{}
+	for rows.Next() {
+		var i GetHistoricalInstancesRow
+		if err := rows.Scan(
+			&i.InstanceID,
+			&i.EntityID,
+			&i.IntegrationSource,
+			&i.ProducedBy,
+			&i.CreatedAt,
+			&i.ModifiedAt,
+			&i.Metadata,
+			&i.EntityName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getInstances = `-- name: GetInstances :many
+SELECT 
+  e.entity_id,
+  e.name AS entity_name,
+  p.integration_source,
+  c.template,
+  i.instance_id AS instance_id,
+  i.entity_id AS instance_entity_id,
+  i.produced_by,
+  i.created_at AS instance_created_at,
+  i.modified_at,
+  i.metadata,
+  pos.instance_id AS position_instance_id,
+  pos.instance_created_at AS position_created_at,
+  pos.latitude_degrees,
+  pos.longitude_degrees,
+  pos.heading_degrees,
+  pos.altitude_hae_meters,
+  pos.speed_mps
+FROM entity e
+JOIN provenance p ON e.entity_id = p.entity_id
+JOIN context c ON e.entity_id = c.entity_id
+JOIN instance i ON e.entity_id = i.entity_id
+JOIN position pos ON i.instance_id = pos.instance_id
+                 AND i.created_at = pos.instance_created_at
+ORDER BY i.created_at
+`
+
+type GetInstancesRow struct {
+	EntityID           uuid.UUID             `json:"entity_id"`
+	EntityName         string                `json:"entity_name"`
+	IntegrationSource  string                `json:"integration_source"`
+	Template           int32                 `json:"template"`
+	InstanceID         uuid.UUID             `json:"instance_id"`
+	InstanceEntityID   uuid.UUID             `json:"instance_entity_id"`
+	ProducedBy         sql.NullString        `json:"produced_by"`
+	InstanceCreatedAt  time.Time             `json:"instance_created_at"`
+	ModifiedAt         time.Time             `json:"modified_at"`
+	Metadata           pqtype.NullRawMessage `json:"metadata"`
+	PositionInstanceID uuid.UUID             `json:"position_instance_id"`
+	PositionCreatedAt  time.Time             `json:"position_created_at"`
+	LatitudeDegrees    float64               `json:"latitude_degrees"`
+	LongitudeDegrees   float64               `json:"longitude_degrees"`
+	HeadingDegrees     sql.NullFloat64       `json:"heading_degrees"`
+	AltitudeHaeMeters  sql.NullFloat64       `json:"altitude_hae_meters"`
+	SpeedMps           sql.NullFloat64       `json:"speed_mps"`
 }
 
 func (q *Queries) GetInstances(ctx context.Context) ([]GetInstancesRow, error) {
@@ -288,13 +361,14 @@ func (q *Queries) GetInstances(ctx context.Context) ([]GetInstancesRow, error) {
 			&i.EntityName,
 			&i.IntegrationSource,
 			&i.Template,
-			&i.ID,
-			&i.EntityID_2,
+			&i.InstanceID,
+			&i.InstanceEntityID,
 			&i.ProducedBy,
-			&i.CreatedAt,
+			&i.InstanceCreatedAt,
 			&i.ModifiedAt,
 			&i.Metadata,
-			&i.InstanceID,
+			&i.PositionInstanceID,
+			&i.PositionCreatedAt,
 			&i.LatitudeDegrees,
 			&i.LongitudeDegrees,
 			&i.HeadingDegrees,
@@ -314,11 +388,70 @@ func (q *Queries) GetInstances(ctx context.Context) ([]GetInstancesRow, error) {
 	return items, nil
 }
 
+const getLatestInstances = `-- name: GetLatestInstances :many
+SELECT DISTINCT ON (i.entity_id) 
+  i.instance_id,
+  i.entity_id,
+  p.integration_source,
+  i.produced_by,
+  i.created_at,
+  i.modified_at,
+  i.metadata,
+  e.name
+FROM instance i
+JOIN entity e ON i.entity_id = e.entity_id
+JOIN provenance p ON e.entity_id = p.entity_id
+ORDER BY i.entity_id, i.created_at DESC
+`
+
+type GetLatestInstancesRow struct {
+	InstanceID        uuid.UUID             `json:"instance_id"`
+	EntityID          uuid.UUID             `json:"entity_id"`
+	IntegrationSource string                `json:"integration_source"`
+	ProducedBy        sql.NullString        `json:"produced_by"`
+	CreatedAt         time.Time             `json:"created_at"`
+	ModifiedAt        time.Time             `json:"modified_at"`
+	Metadata          pqtype.NullRawMessage `json:"metadata"`
+	Name              string                `json:"name"`
+}
+
+func (q *Queries) GetLatestInstances(ctx context.Context) ([]GetLatestInstancesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getLatestInstances)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetLatestInstancesRow{}
+	for rows.Next() {
+		var i GetLatestInstancesRow
+		if err := rows.Scan(
+			&i.InstanceID,
+			&i.EntityID,
+			&i.IntegrationSource,
+			&i.ProducedBy,
+			&i.CreatedAt,
+			&i.ModifiedAt,
+			&i.Metadata,
+			&i.Name,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const insertInstance = `-- name: InsertInstance :one
 
 INSERT INTO instance (entity_id, produced_by, created_at, metadata)
 VALUES ($1, $2, $3, $4)
-RETURNING id
+RETURNING instance_id, created_at
 `
 
 type InsertInstanceParams struct {
@@ -328,28 +461,34 @@ type InsertInstanceParams struct {
 	Metadata   pqtype.NullRawMessage `json:"metadata"`
 }
 
+type InsertInstanceRow struct {
+	InstanceID uuid.UUID `json:"instance_id"`
+	CreatedAt  time.Time `json:"created_at"`
+}
+
 // ----------------------------------------------------
 // Instance / Position Queries
 // ----------------------------------------------------
-func (q *Queries) InsertInstance(ctx context.Context, arg InsertInstanceParams) (uuid.UUID, error) {
+func (q *Queries) InsertInstance(ctx context.Context, arg InsertInstanceParams) (InsertInstanceRow, error) {
 	row := q.db.QueryRowContext(ctx, insertInstance,
 		arg.EntityID,
 		arg.ProducedBy,
 		arg.CreatedAt,
 		arg.Metadata,
 	)
-	var id uuid.UUID
-	err := row.Scan(&id)
-	return id, err
+	var i InsertInstanceRow
+	err := row.Scan(&i.InstanceID, &i.CreatedAt)
+	return i, err
 }
 
 const insertPosition = `-- name: InsertPosition :exec
-INSERT INTO position (instance_id, latitude_degrees, longitude_degrees, heading_degrees, altitude_hae_meters, speed_mps)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO position (instance_id, instance_created_at, latitude_degrees, longitude_degrees, heading_degrees, altitude_hae_meters, speed_mps)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 `
 
 type InsertPositionParams struct {
 	InstanceID        uuid.UUID       `json:"instance_id"`
+	InstanceCreatedAt time.Time       `json:"instance_created_at"`
 	LatitudeDegrees   float64         `json:"latitude_degrees"`
 	LongitudeDegrees  float64         `json:"longitude_degrees"`
 	HeadingDegrees    sql.NullFloat64 `json:"heading_degrees"`
@@ -360,6 +499,7 @@ type InsertPositionParams struct {
 func (q *Queries) InsertPosition(ctx context.Context, arg InsertPositionParams) error {
 	_, err := q.db.ExecContext(ctx, insertPosition,
 		arg.InstanceID,
+		arg.InstanceCreatedAt,
 		arg.LatitudeDegrees,
 		arg.LongitudeDegrees,
 		arg.HeadingDegrees,
