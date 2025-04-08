@@ -8,6 +8,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Querier interface {
@@ -26,7 +27,7 @@ type Querier interface {
 	GetEntityByNameAndIntegrationSource(ctx context.Context, arg GetEntityByNameAndIntegrationSourceParams) (GetEntityByNameAndIntegrationSourceRow, error)
 	// Description: Retrieve entities by name
 	GetEntityByNames(ctx context.Context, name string) ([]GetEntityByNamesRow, error)
-	GetHistoricalInstances(ctx context.Context, dollar_1 int64) ([]GetHistoricalInstancesRow, error)
+	GetHistoricalInstances(ctx context.Context, dollar_1 pgtype.Interval) ([]GetHistoricalInstancesRow, error)
 	GetInstances(ctx context.Context) ([]GetInstancesRow, error)
 	GetLatestInstances(ctx context.Context) ([]GetLatestInstancesRow, error)
 	//----------------------------------------------------

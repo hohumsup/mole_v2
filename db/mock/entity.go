@@ -15,6 +15,7 @@ import (
 	reflect "reflect"
 
 	uuid "github.com/google/uuid"
+	pgtype "github.com/jackc/pgx/v5/pgtype"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -132,7 +133,7 @@ func (mr *MockQuerierMockRecorder) GetEntityByNames(ctx, name any) *gomock.Call 
 }
 
 // GetHistoricalInstances mocks base method.
-func (m *MockQuerier) GetHistoricalInstances(ctx context.Context, dollar_1 int64) ([]db.GetHistoricalInstancesRow, error) {
+func (m *MockQuerier) GetHistoricalInstances(ctx context.Context, dollar_1 pgtype.Interval) ([]db.GetHistoricalInstancesRow, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetHistoricalInstances", ctx, dollar_1)
 	ret0, _ := ret[0].([]db.GetHistoricalInstancesRow)
