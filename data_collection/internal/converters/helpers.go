@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/sqlc-dev/pqtype"
 )
 
@@ -20,6 +21,13 @@ func Float64ToNullFloat64(f *float64) sql.NullFloat64 {
 		return sql.NullFloat64{Float64: *f, Valid: true}
 	}
 	return sql.NullFloat64{Valid: false}
+}
+
+func Float64ToPGFloat8(value *float64) pgtype.Float8 {
+	if value != nil {
+		return pgtype.Float8{Float64: *value, Valid: true}
+	}
+	return pgtype.Float8{Valid: false}
 }
 
 func ConvertJSONToPQType(raw json.RawMessage) (pqtype.NullRawMessage, error) {
