@@ -16,7 +16,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/sqlc-dev/pqtype"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // CreateEntity returns a Gin handler for creating an entity.
@@ -87,7 +87,7 @@ func CreateEntity(query db.Querier) gin.HandlerFunc {
 		var instanceID *uuid.UUID
 		var instanceCreatedAt time.Time
 		if req.CreatedAt != nil {
-			normalizedTime := req.CreatedAt.UTC().Truncate(time.Second)
+			normalizedTime := req.CreatedAt.UTC()
 			log.Printf("Instance created_at before DB %v\n", normalizedTime.Format(time.RFC3339Nano))
 
 			instanceArg := db.InsertInstanceParams{
@@ -96,12 +96,12 @@ func CreateEntity(query db.Querier) gin.HandlerFunc {
 			}
 			if req.Instance != nil {
 				if req.Instance.ProducedBy != nil {
-					instanceArg.ProducedBy = sql.NullString{
+					instanceArg.ProducedBy = pgtype.Text{
 						String: *req.Instance.ProducedBy,
 						Valid:  true,
 					}
 				} else {
-					instanceArg.ProducedBy = sql.NullString{Valid: false}
+					instanceArg.ProducedBy = pgtype.Text{Valid: false}
 				}
 				if req.Instance.Metadata != nil {
 					meta, err := converters.ConvertJSONToPQType(*req.Instance.Metadata)
@@ -112,9 +112,9 @@ func CreateEntity(query db.Querier) gin.HandlerFunc {
 						})
 						return
 					}
-					instanceArg.Metadata = meta
+					instanceArg.Metadata = meta.RawMessage
 				} else {
-					instanceArg.Metadata = pqtype.NullRawMessage{Valid: false}
+					instanceArg.Metadata = nil
 				}
 			}
 			newInstance, err := query.InsertInstance(context.Background(), instanceArg)
@@ -136,9 +136,9 @@ func CreateEntity(query db.Querier) gin.HandlerFunc {
 				InstanceCreatedAt: instanceCreatedAt, // This should match the instance's created_at.
 				LatitudeDegrees:   req.Position.LatitudeDegrees,
 				LongitudeDegrees:  req.Position.LongitudeDegrees,
-				HeadingDegrees:    converters.Float64ToNullFloat64(req.Position.HeadingDegrees),
-				AltitudeHaeMeters: converters.Float64ToNullFloat64(req.Position.AltitudeHaeMeters),
-				SpeedMps:          converters.Float64ToNullFloat64(req.Position.SpeedMps),
+				HeadingDegrees:    converters.Float64ToPGFloat8(req.Position.HeadingDegrees),
+				AltitudeHaeMeters: converters.Float64ToPGFloat8(req.Position.AltitudeHaeMeters),
+				SpeedMps:          converters.Float64ToPGFloat8(req.Position.SpeedMps),
 			}
 
 			log.Printf("Position %v\n", positionArg)
@@ -186,6 +186,12 @@ func GetInstances(query db.Querier) gin.HandlerFunc {
 
 		var response []models.GetInstances
 		for _, pos := range positions {
+			var metadata json.RawMessage
+			if pos.Metadata != nil {
+				metadata = pos.Metadata
+			} else {
+				metadata = nil
+			}
 			response = append(response, models.GetInstances{
 				EntityID:          pos.EntityID,
 				Name:              pos.EntityName,
@@ -200,7 +206,7 @@ func GetInstances(query db.Querier) gin.HandlerFunc {
 				HeadingDegrees:    &pos.HeadingDegrees.Float64,
 				AltitudeHaeMeters: &pos.AltitudeHaeMeters.Float64,
 				SpeedMps:          &pos.SpeedMps.Float64,
-				Metadata:          &pos.Metadata.RawMessage,
+				Metadata:          &metadata,
 			})
 		}
 
@@ -220,6 +226,12 @@ func GetLatestInstances(query db.Querier) gin.HandlerFunc {
 		// Map the database rows to your response model.
 		var response []models.GetLatestInstancesResponse
 		for _, inst := range latestInstances {
+			var metadata json.RawMessage
+			if inst.Metadata != nil {
+				metadata = inst.Metadata
+			} else {
+				metadata = nil
+			}
 			response = append(response, models.GetLatestInstancesResponse{
 				InstanceID:        inst.InstanceID,
 				EntityID:          inst.EntityID,
@@ -227,7 +239,7 @@ func GetLatestInstances(query db.Querier) gin.HandlerFunc {
 				ProducedBy:        inst.ProducedBy.String, // or use a helper to handle nulls
 				CreatedAt:         inst.CreatedAt,
 				ModifiedAt:        inst.ModifiedAt,
-				Metadata:          string(inst.Metadata.RawMessage),
+				Metadata:          string(metadata),
 				Name:              inst.Name,
 			})
 		}
@@ -244,33 +256,40 @@ func GetHistoricalInstances(query db.Querier) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "interval parameter is required"})
 			return
 		}
-		// Convert interval to int64.
+		// Convert interval to pgtype.Interval.
 		intervalInt, err := strconv.ParseInt(interval, 10, 64)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid interval parameter"})
 			return
 		}
+		intervalPG := pgtype.Interval{
+			Microseconds: intervalInt * 1000000,
+			Valid:        true,
+		}
 
 		// Call the sqlc-generated query.
-		rows, err := query.GetHistoricalInstances(c.Request.Context(), intervalInt)
+		rows, err := query.GetHistoricalInstances(c.Request.Context(), intervalPG)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
-		// Map the returned rows to our model.
 		var result []models.GetHistoricalInstance
 		for _, row := range rows {
-			// If ProducedBy is sql.NullString, use row.ProducedBy.String.
-			// Similarly for Metadata if needed.
+			var metadata json.RawMessage
+			if row.Metadata != nil {
+				metadata = row.Metadata
+			} else {
+				metadata = nil
+			}
 			instance := models.GetHistoricalInstance{
 				InstanceID:        row.InstanceID,
 				EntityID:          row.EntityID,
 				IntegrationSource: row.IntegrationSource,
-				ProducedBy:        row.ProducedBy.String, // Adjust if necessary
+				ProducedBy:        row.ProducedBy.String,
 				CreatedAt:         row.CreatedAt,
 				ModifiedAt:        row.ModifiedAt,
-				Metadata:          row.Metadata.RawMessage, // Adjust if necessary
+				Metadata:          metadata,
 				EntityName:        row.EntityName,
 			}
 			result = append(result, instance)

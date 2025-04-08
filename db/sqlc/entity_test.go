@@ -11,7 +11,7 @@ import (
 
 	"github.com/brianvoe/gofakeit/v6"
 	"github.com/google/uuid"
-	"github.com/sqlc-dev/pqtype"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/exp/rand"
 )
@@ -263,7 +263,7 @@ func TestCreateAndUpdateEntityWithInstanceAndPosition(t *testing.T) {
 			newEntity, err := testQueries.CreateEntity(context.Background(), CreateEntityParams{
 				Name:              getEntity.Name,
 				Description:       getEntity.Description,
-				DataType:          sql.NullString{Valid: false},
+				DataType:          pgtype.Text{Valid: false},
 				IntegrationSource: getEntity.IntegrationSource,
 			})
 			if err != nil {
@@ -283,8 +283,8 @@ func TestCreateAndUpdateEntityWithInstanceAndPosition(t *testing.T) {
 		// Insert Instance and capture composite return values
 		newInstance, err := testQueries.InsertInstance(context.Background(), InsertInstanceParams{
 			EntityID:   entityID,
-			ProducedBy: sql.NullString{Valid: false},
-			Metadata:   pqtype.NullRawMessage{RawMessage: metadataJSON, Valid: true},
+			ProducedBy: pgtype.Text{Valid: false},
+			Metadata:   metadataJSON,
 			CreatedAt:  time.Now().UTC(),
 		})
 		if err != nil {
@@ -300,9 +300,9 @@ func TestCreateAndUpdateEntityWithInstanceAndPosition(t *testing.T) {
 			InstanceCreatedAt: instanceCreatedAt,
 			LatitudeDegrees:   36.7749,
 			LongitudeDegrees:  -123.4194,
-			HeadingDegrees:    sql.NullFloat64{Float64: 90.0, Valid: true},
-			AltitudeHaeMeters: sql.NullFloat64{Float64: 100.0, Valid: true},
-			SpeedMps:          sql.NullFloat64{Float64: 22.0, Valid: true},
+			HeadingDegrees:    pgtype.Float8{Float64: 90.0, Valid: true},
+			AltitudeHaeMeters: pgtype.Float8{Float64: 100.0, Valid: true},
+			SpeedMps:          pgtype.Float8{Float64: 22.0, Valid: true},
 		}
 
 		// Insert position using the composite key values.

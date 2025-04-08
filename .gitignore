@@ -23,3 +23,6 @@ Thumbs.db         # Windows
 # Temporary files
 *.tmp
 *.temp
+
+# Frontend
+angular/*

@@ -7,12 +7,10 @@ package db
 
 import (
 	"context"
-	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/lib/pq"
-	"github.com/sqlc-dev/pqtype"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createEntity = `-- name: CreateEntity :one
@@ -46,13 +44,13 @@ JOIN new_context c ON e.entity_id = c.entity_id
 `
 
 type CreateEntityParams struct {
-	Name              string         `json:"name"`
-	Description       string         `json:"description"`
-	DataType          sql.NullString `json:"data_type"`
-	IntegrationSource string         `json:"integration_source"`
-	Template          int32          `json:"template"`
-	EntityType        sql.NullString `json:"entity_type"`
-	SpecificType      sql.NullString `json:"specific_type"`
+	Name              string      `json:"name"`
+	Description       string      `json:"description"`
+	DataType          pgtype.Text `json:"data_type"`
+	IntegrationSource string      `json:"integration_source"`
+	Template          int32       `json:"template"`
+	EntityType        pgtype.Text `json:"entity_type"`
+	SpecificType      pgtype.Text `json:"specific_type"`
 }
 
 type CreateEntityRow struct {
@@ -68,7 +66,7 @@ type CreateEntityRow struct {
 // ----------------------------------------------------
 // Description: Create a new entity
 func (q *Queries) CreateEntity(ctx context.Context, arg CreateEntityParams) (CreateEntityRow, error) {
-	row := q.db.QueryRowContext(ctx, createEntity,
+	row := q.db.QueryRow(ctx, createEntity,
 		arg.Name,
 		arg.Description,
 		arg.DataType,
@@ -95,7 +93,7 @@ WHERE entity_id = $1
 
 // Description: Delete an entity by ID
 func (q *Queries) DeleteEntity(ctx context.Context, entityID uuid.UUID) error {
-	_, err := q.db.ExecContext(ctx, deleteEntity, entityID)
+	_, err := q.db.Exec(ctx, deleteEntity, entityID)
 	return err
 }
 
@@ -115,7 +113,7 @@ type GetEntitiesByNamesRow struct {
 
 // Description: Retrieve entities with an array of names
 func (q *Queries) GetEntitiesByNames(ctx context.Context, dollar_1 []string) ([]GetEntitiesByNamesRow, error) {
-	rows, err := q.db.QueryContext(ctx, getEntitiesByNames, pq.Array(dollar_1))
+	rows, err := q.db.Query(ctx, getEntitiesByNames, dollar_1)
 	if err != nil {
 		return nil, err
 	}
@@ -133,9 +131,6 @@ func (q *Queries) GetEntitiesByNames(ctx context.Context, dollar_1 []string) ([]
 		}
 		items = append(items, i)
 	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -149,7 +144,7 @@ WHERE entity_id = $1
 
 // Description: Retrieve an entity by ID
 func (q *Queries) GetEntity(ctx context.Context, entityID uuid.UUID) (Entity, error) {
-	row := q.db.QueryRowContext(ctx, getEntity, entityID)
+	row := q.db.QueryRow(ctx, getEntity, entityID)
 	var i Entity
 	err := row.Scan(&i.EntityID, &i.Name, &i.Description)
 	return i, err
@@ -184,7 +179,7 @@ type GetEntityByNameAndIntegrationSourceRow struct {
 
 // Description: Retrieve an entity by name and integration source
 func (q *Queries) GetEntityByNameAndIntegrationSource(ctx context.Context, arg GetEntityByNameAndIntegrationSourceParams) (GetEntityByNameAndIntegrationSourceRow, error) {
-	row := q.db.QueryRowContext(ctx, getEntityByNameAndIntegrationSource, arg.Name, arg.IntegrationSource)
+	row := q.db.QueryRow(ctx, getEntityByNameAndIntegrationSource, arg.Name, arg.IntegrationSource)
 	var i GetEntityByNameAndIntegrationSourceRow
 	err := row.Scan(
 		&i.EntityID,
@@ -212,7 +207,7 @@ type GetEntityByNamesRow struct {
 
 // Description: Retrieve entities by name
 func (q *Queries) GetEntityByNames(ctx context.Context, name string) ([]GetEntityByNamesRow, error) {
-	rows, err := q.db.QueryContext(ctx, getEntityByNames, name)
+	rows, err := q.db.Query(ctx, getEntityByNames, name)
 	if err != nil {
 		return nil, err
 	}
@@ -229,9 +224,6 @@ func (q *Queries) GetEntityByNames(ctx context.Context, name string) ([]GetEntit
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -257,18 +249,18 @@ ORDER BY i.modified_at
 `
 
 type GetHistoricalInstancesRow struct {
-	InstanceID        uuid.UUID             `json:"instance_id"`
-	EntityID          uuid.UUID             `json:"entity_id"`
-	IntegrationSource string                `json:"integration_source"`
-	ProducedBy        sql.NullString        `json:"produced_by"`
-	CreatedAt         time.Time             `json:"created_at"`
-	ModifiedAt        time.Time             `json:"modified_at"`
-	Metadata          pqtype.NullRawMessage `json:"metadata"`
-	EntityName        string                `json:"entity_name"`
+	InstanceID        uuid.UUID   `json:"instance_id"`
+	EntityID          uuid.UUID   `json:"entity_id"`
+	IntegrationSource string      `json:"integration_source"`
+	ProducedBy        pgtype.Text `json:"produced_by"`
+	CreatedAt         time.Time   `json:"created_at"`
+	ModifiedAt        time.Time   `json:"modified_at"`
+	Metadata          []byte      `json:"metadata"`
+	EntityName        string      `json:"entity_name"`
 }
 
-func (q *Queries) GetHistoricalInstances(ctx context.Context, dollar_1 int64) ([]GetHistoricalInstancesRow, error) {
-	rows, err := q.db.QueryContext(ctx, getHistoricalInstances, dollar_1)
+func (q *Queries) GetHistoricalInstances(ctx context.Context, dollar_1 pgtype.Interval) ([]GetHistoricalInstancesRow, error) {
+	rows, err := q.db.Query(ctx, getHistoricalInstances, dollar_1)
 	if err != nil {
 		return nil, err
 	}
@@ -289,9 +281,6 @@ func (q *Queries) GetHistoricalInstances(ctx context.Context, dollar_1 int64) ([
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -328,27 +317,27 @@ ORDER BY i.created_at
 `
 
 type GetInstancesRow struct {
-	EntityID           uuid.UUID             `json:"entity_id"`
-	EntityName         string                `json:"entity_name"`
-	IntegrationSource  string                `json:"integration_source"`
-	Template           int32                 `json:"template"`
-	InstanceID         uuid.UUID             `json:"instance_id"`
-	InstanceEntityID   uuid.UUID             `json:"instance_entity_id"`
-	ProducedBy         sql.NullString        `json:"produced_by"`
-	InstanceCreatedAt  time.Time             `json:"instance_created_at"`
-	ModifiedAt         time.Time             `json:"modified_at"`
-	Metadata           pqtype.NullRawMessage `json:"metadata"`
-	PositionInstanceID uuid.UUID             `json:"position_instance_id"`
-	PositionCreatedAt  time.Time             `json:"position_created_at"`
-	LatitudeDegrees    float64               `json:"latitude_degrees"`
-	LongitudeDegrees   float64               `json:"longitude_degrees"`
-	HeadingDegrees     sql.NullFloat64       `json:"heading_degrees"`
-	AltitudeHaeMeters  sql.NullFloat64       `json:"altitude_hae_meters"`
-	SpeedMps           sql.NullFloat64       `json:"speed_mps"`
+	EntityID           uuid.UUID     `json:"entity_id"`
+	EntityName         string        `json:"entity_name"`
+	IntegrationSource  string        `json:"integration_source"`
+	Template           int32         `json:"template"`
+	InstanceID         uuid.UUID     `json:"instance_id"`
+	InstanceEntityID   uuid.UUID     `json:"instance_entity_id"`
+	ProducedBy         pgtype.Text   `json:"produced_by"`
+	InstanceCreatedAt  time.Time     `json:"instance_created_at"`
+	ModifiedAt         time.Time     `json:"modified_at"`
+	Metadata           []byte        `json:"metadata"`
+	PositionInstanceID uuid.UUID     `json:"position_instance_id"`
+	PositionCreatedAt  time.Time     `json:"position_created_at"`
+	LatitudeDegrees    float64       `json:"latitude_degrees"`
+	LongitudeDegrees   float64       `json:"longitude_degrees"`
+	HeadingDegrees     pgtype.Float8 `json:"heading_degrees"`
+	AltitudeHaeMeters  pgtype.Float8 `json:"altitude_hae_meters"`
+	SpeedMps           pgtype.Float8 `json:"speed_mps"`
 }
 
 func (q *Queries) GetInstances(ctx context.Context) ([]GetInstancesRow, error) {
-	rows, err := q.db.QueryContext(ctx, getInstances)
+	rows, err := q.db.Query(ctx, getInstances)
 	if err != nil {
 		return nil, err
 	}
@@ -379,9 +368,6 @@ func (q *Queries) GetInstances(ctx context.Context) ([]GetInstancesRow, error) {
 		}
 		items = append(items, i)
 	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -405,18 +391,18 @@ ORDER BY i.entity_id, i.created_at DESC
 `
 
 type GetLatestInstancesRow struct {
-	InstanceID        uuid.UUID             `json:"instance_id"`
-	EntityID          uuid.UUID             `json:"entity_id"`
-	IntegrationSource string                `json:"integration_source"`
-	ProducedBy        sql.NullString        `json:"produced_by"`
-	CreatedAt         time.Time             `json:"created_at"`
-	ModifiedAt        time.Time             `json:"modified_at"`
-	Metadata          pqtype.NullRawMessage `json:"metadata"`
-	Name              string                `json:"name"`
+	InstanceID        uuid.UUID   `json:"instance_id"`
+	EntityID          uuid.UUID   `json:"entity_id"`
+	IntegrationSource string      `json:"integration_source"`
+	ProducedBy        pgtype.Text `json:"produced_by"`
+	CreatedAt         time.Time   `json:"created_at"`
+	ModifiedAt        time.Time   `json:"modified_at"`
+	Metadata          []byte      `json:"metadata"`
+	Name              string      `json:"name"`
 }
 
 func (q *Queries) GetLatestInstances(ctx context.Context) ([]GetLatestInstancesRow, error) {
-	rows, err := q.db.QueryContext(ctx, getLatestInstances)
+	rows, err := q.db.Query(ctx, getLatestInstances)
 	if err != nil {
 		return nil, err
 	}
@@ -438,9 +424,6 @@ func (q *Queries) GetLatestInstances(ctx context.Context) ([]GetLatestInstancesR
 		}
 		items = append(items, i)
 	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -455,10 +438,10 @@ RETURNING instance_id, created_at
 `
 
 type InsertInstanceParams struct {
-	EntityID   uuid.UUID             `json:"entity_id"`
-	ProducedBy sql.NullString        `json:"produced_by"`
-	CreatedAt  time.Time             `json:"created_at"`
-	Metadata   pqtype.NullRawMessage `json:"metadata"`
+	EntityID   uuid.UUID   `json:"entity_id"`
+	ProducedBy pgtype.Text `json:"produced_by"`
+	CreatedAt  time.Time   `json:"created_at"`
+	Metadata   []byte      `json:"metadata"`
 }
 
 type InsertInstanceRow struct {
@@ -470,7 +453,7 @@ type InsertInstanceRow struct {
 // Instance / Position Queries
 // ----------------------------------------------------
 func (q *Queries) InsertInstance(ctx context.Context, arg InsertInstanceParams) (InsertInstanceRow, error) {
-	row := q.db.QueryRowContext(ctx, insertInstance,
+	row := q.db.QueryRow(ctx, insertInstance,
 		arg.EntityID,
 		arg.ProducedBy,
 		arg.CreatedAt,
@@ -487,17 +470,17 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)
 `
 
 type InsertPositionParams struct {
-	InstanceID        uuid.UUID       `json:"instance_id"`
-	InstanceCreatedAt time.Time       `json:"instance_created_at"`
-	LatitudeDegrees   float64         `json:"latitude_degrees"`
-	LongitudeDegrees  float64         `json:"longitude_degrees"`
-	HeadingDegrees    sql.NullFloat64 `json:"heading_degrees"`
-	AltitudeHaeMeters sql.NullFloat64 `json:"altitude_hae_meters"`
-	SpeedMps          sql.NullFloat64 `json:"speed_mps"`
+	InstanceID        uuid.UUID     `json:"instance_id"`
+	InstanceCreatedAt time.Time     `json:"instance_created_at"`
+	LatitudeDegrees   float64       `json:"latitude_degrees"`
+	LongitudeDegrees  float64       `json:"longitude_degrees"`
+	HeadingDegrees    pgtype.Float8 `json:"heading_degrees"`
+	AltitudeHaeMeters pgtype.Float8 `json:"altitude_hae_meters"`
+	SpeedMps          pgtype.Float8 `json:"speed_mps"`
 }
 
 func (q *Queries) InsertPosition(ctx context.Context, arg InsertPositionParams) error {
-	_, err := q.db.ExecContext(ctx, insertPosition,
+	_, err := q.db.Exec(ctx, insertPosition,
 		arg.InstanceID,
 		arg.InstanceCreatedAt,
 		arg.LatitudeDegrees,
@@ -531,7 +514,7 @@ type ListEntitiesRow struct {
 
 // Description: Retrieve all entities
 func (q *Queries) ListEntities(ctx context.Context, arg ListEntitiesParams) ([]ListEntitiesRow, error) {
-	rows, err := q.db.QueryContext(ctx, listEntities, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, listEntities, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -548,9 +531,6 @@ func (q *Queries) ListEntities(ctx context.Context, arg ListEntitiesParams) ([]L
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -575,7 +555,7 @@ type UpdateEntityByNameParams struct {
 
 // Description: Update an entity by name
 func (q *Queries) UpdateEntityByName(ctx context.Context, arg UpdateEntityByNameParams) (Entity, error) {
-	row := q.db.QueryRowContext(ctx, updateEntityByName, arg.Name, arg.Name_2, arg.Description)
+	row := q.db.QueryRow(ctx, updateEntityByName, arg.Name, arg.Name_2, arg.Description)
 	var i Entity
 	err := row.Scan(&i.EntityID, &i.Name, &i.Description)
 	return i, err
@@ -605,7 +585,7 @@ type UpdateEntityIntegrationSourceByNameAndSourceRow struct {
 // Description: Update an entity's integration source by name and source
 // TODO: Add Template to UpdateEntityIntegrationSourceByNameAndSource
 func (q *Queries) UpdateEntityIntegrationSourceByNameAndSource(ctx context.Context, arg UpdateEntityIntegrationSourceByNameAndSourceParams) (UpdateEntityIntegrationSourceByNameAndSourceRow, error) {
-	row := q.db.QueryRowContext(ctx, updateEntityIntegrationSourceByNameAndSource, arg.Name, arg.IntegrationSource, arg.IntegrationSource_2)
+	row := q.db.QueryRow(ctx, updateEntityIntegrationSourceByNameAndSource, arg.Name, arg.IntegrationSource, arg.IntegrationSource_2)
 	var i UpdateEntityIntegrationSourceByNameAndSourceRow
 	err := row.Scan(&i.EntityID, &i.IntegrationSource)
 	return i, err

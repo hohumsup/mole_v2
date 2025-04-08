@@ -15,6 +15,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
@@ -116,9 +117,9 @@ func TestCreateEntityAPI(t *testing.T) {
 							InstanceCreatedAt: expectedCreatedAt,
 							LatitudeDegrees:   expectedLatitude,
 							LongitudeDegrees:  expectedLongitude,
-							HeadingDegrees:    sql.NullFloat64{Float64: expectedHeading, Valid: true},
-							AltitudeHaeMeters: sql.NullFloat64{Float64: expectedAltitude, Valid: true},
-							SpeedMps:          sql.NullFloat64{Float64: expectedSpeed, Valid: true},
+							HeadingDegrees:    pgtype.Float8{Float64: expectedHeading, Valid: true},
+							AltitudeHaeMeters: pgtype.Float8{Float64: expectedAltitude, Valid: true},
+							SpeedMps:          pgtype.Float8{Float64: expectedSpeed, Valid: true},
 						}).
 						Return(nil),
 				)
