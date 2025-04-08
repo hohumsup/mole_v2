@@ -29,7 +29,7 @@ sqlc:
 	sqlc generate
 
 test:
-	go test -v -cover $(shell go list ./...)
+	go test -count=1 -v -cover $(shell go list ./...)
 
 mock:
 	mockgen -source=db/sqlc/querier.go -destination=db/mock/entity.go Entity 

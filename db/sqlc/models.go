@@ -29,7 +29,7 @@ type Context struct {
 // Represents any identifiable object or concept within a test environment. Entities may be physical or non-physical, including:
 //   - Physical objects, such as autonomous vehicles, sensors, or infrastructure
 //   - Non-physical events, such as camera detections, algorithmic classifications, or test executions
-//   - Conceptual areas, such as regions of interest, operational zones, or mission boundaries.
+//   - Conceptual areas, such as regions of interest, operation zones, or mission boundaries.
 type Entity struct {
 	// Unique identifier for the entity.
 	EntityID uuid.UUID `json:"entity_id"`

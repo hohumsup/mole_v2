@@ -17,7 +17,7 @@ COMMENT ON TABLE "entity" IS
   'Represents any identifiable object or concept within a test environment. Entities may be physical or non-physical, including:
    - Physical objects, such as autonomous vehicles, sensors, or infrastructure
    - Non-physical events, such as camera detections, algorithmic classifications, or test executions
-   - Conceptual areas, such as regions of interest, operational zones, or mission boundaries.';
+   - Conceptual areas, such as regions of interest, operation zones, or mission boundaries.';
 COMMENT ON COLUMN "entity"."entity_id" IS 'Unique identifier for the entity.';
 COMMENT ON COLUMN "entity"."name" IS 'Human-readable name representing the entity.';
 COMMENT ON COLUMN "entity"."description" IS 'Descriptive information providing context about the entity.';
@@ -91,7 +91,6 @@ COMMENT ON COLUMN "position"."speed_mps" IS 'Speed as the magnitude of velocity,
 -------------------------------------------------
 -- GEO_DETAIL TABLE (1-to-1 relationship with Instance)
 -------------------------------------------------
--- Removed instance_created_at column, now referencing only instance_id
 CREATE TABLE "geo_detail" (
   "instance_id" uuid NOT NULL,
   "instance_created_at" timestamptz NOT NULL,  -- Must match instance.created_at
@@ -221,3 +220,39 @@ CREATE TRIGGER check_unique_entity_name_integration_trigger
 BEFORE INSERT OR UPDATE ON provenance
 FOR EACH ROW
 EXECUTE FUNCTION check_unique_entity_name_integration_func();
+
+
+-------------------------------------------------
+-- TRIGGER ON POSITION TABLE TO SYNC WITH GEO_DETAIL point
+-------------------------------------------------
+CREATE OR REPLACE FUNCTION sync_geo_detail_geo_point()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 
+    FROM geo_detail 
+    WHERE instance_id = NEW.instance_id
+      AND instance_created_at = NEW.instance_created_at
+  ) THEN
+    -- Update the geo_point field with the position lat/lon values
+    UPDATE geo_detail
+    SET geo_point = ST_MakePoint(NEW.longitude_degrees, NEW.latitude_degrees)
+    WHERE instance_id = NEW.instance_id
+      AND instance_created_at = NEW.instance_created_at;
+  ELSE
+    -- Insert a new record into geo_detail with the position lat/lon vlaues
+    INSERT INTO geo_detail(instance_id, instance_created_at, geo_point)
+    VALUES (
+      NEW.instance_id,
+      NEW.instance_created_at,
+      ST_MakePoint(NEW.longitude_degrees, NEW.latitude_degrees)
+    );
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_geo_detail_trigger
+AFTER INSERT OR UPDATE OF latitude_degrees, longitude_degrees ON position
+FOR EACH ROW
+EXECUTE FUNCTION sync_geo_detail_geo_point();
