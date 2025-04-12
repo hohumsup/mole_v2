@@ -73,18 +73,18 @@ func TestCustomBulkCreateEntities(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		now := time.Now().UTC()
 
-		// entityNames := []string{"entity", "entity2", "entity3"}
-		// producedBy := fmt.Sprintf("%s%d", entityNames[i%3], i)
+		entityNames := []string{"entity", "entity2", "entity3"}
+		producedBy := fmt.Sprintf("%s%d", entityNames[i%3], i)
 		integrationSources := []string{"mole", "tak", "blue"}
 		payload[i] = BulkEntity{
-			EntityName:         "entity96",
+			EntityName:         producedBy,
 			EntityDescription:  "desc",
 			IntegrationSource:  integrationSources[i%3],
 			EntityType:         "type",
 			SpecificType:       "specific_type",
 			DataType:           "data_type",
 			Template:           1,
-			InstanceProducedBy: "entity96",
+			InstanceProducedBy: producedBy,
 			InstanceMetadata:   map[string]interface{}{"key": "value"},
 			InstanceCreatedAt:  now.Format(time.RFC3339),
 			LatitudeDegrees:    36.2313,
