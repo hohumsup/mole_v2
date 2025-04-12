@@ -1,4 +1,5 @@
 -- name: BulkCreateEntities :exec
+-- Description: One shot bulk insert of entities in a single db round trip 
 WITH 
   -- Parse the input JSON array into individual rows
   data AS (
@@ -117,7 +118,6 @@ WITH
                 AND ae.integration_source = d.integration_source
     RETURNING instance_id, entity_id, created_at
   )
--- Insert the position data for each instance if it exists
 INSERT INTO position (
   instance_id, 
   instance_created_at, 

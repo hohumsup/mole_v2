@@ -155,7 +155,7 @@ WHERE d.latitude_degrees IS NOT NULL
   AND d.longitude_degrees IS NOT NULL
 `
 
-// Insert the position data for each instance if it exists
+// Description: One shot bulk insert of entities in a single db round trip
 func (q *Queries) BulkCreateEntities(ctx context.Context, dollar_1 []byte) error {
 	_, err := q.db.Exec(ctx, bulkCreateEntities, dollar_1)
 	return err
