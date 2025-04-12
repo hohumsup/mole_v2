@@ -12,6 +12,8 @@ import (
 )
 
 type Querier interface {
+	// Insert the position data for each instance if it exists
+	BulkCreateEntities(ctx context.Context, dollar_1 []byte) error
 	//----------------------------------------------------
 	// Entity Queries
 	//----------------------------------------------------
