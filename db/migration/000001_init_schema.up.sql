@@ -177,7 +177,6 @@ ALTER TABLE "context"
     REFERENCES "entity" ("entity_id") 
     ON DELETE CASCADE;
 
-CREATE INDEX ON "context" ("entity_id");
 CREATE INDEX ON "context" ("entity_type");
 
 COMMENT ON COLUMN "context"."context_id" IS 'Unique ID for the context record';

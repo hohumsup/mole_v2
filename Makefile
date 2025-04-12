@@ -17,13 +17,13 @@ drop_db:
 	docker exec gin-postgres dropdb mole
 
 migrate_up:
-	migrate -path db/migration -database "postgresql://mole_user:secret@10.100.100.253:5431/mole?sslmode=disable" -verbose up
+	migrate -path db/migration -database "postgresql://mole_user:secret@localhost:5431/mole?sslmode=disable" -verbose up
 
 migrate_down:
 	migrate -path db/migration -database "postgresql://mole_user:secret@localhost:5431/mole?sslmode=disable" -verbose down
 
 migrate_force:
-	migrate -path db/migration -database "postgresql://mole_user:secret@10.100.100.253:5431/mole?sslmode=disable" force 1
+	migrate -path db/migration -database "postgresql://mole_user:secret@localhost:5431/mole?sslmode=disable" force 1
 
 sqlc:
 	sqlc generate
