@@ -1,0 +1,44 @@
+stages:
+  - test
+
+default:
+  tags:
+    - fusion-shared-runner-docker
+
+variables:
+  POSTGRES_USER: mole_user
+  POSTGRES_PASSWORD: secret
+  POSTGRES_DB: mole
+  GO_VERSION: "1.23.6"
+  MIGRATE_VERSION: "4.18.1"
+
+services:
+  - name: postgis/postgis:16-3.5
+    alias: gin-postgres
+
+before_script:
+  - apt-get update && apt-get install -y curl tar build-essential docker.io
+  - echo "Installing Go $GO_VERSION..."
+  - curl -OL https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz
+  - rm -rf /usr/local/go && tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz
+  - export PATH="/usr/local/go/bin:$PATH"
+  - echo 'export PATH="/usr/local/go/bin:$PATH"' >> ~/.bashrc
+  - go version
+  - echo "Installing golang-migrate..."
+  - curl -L https://github.com/golang-migrate/migrate/releases/download/v${MIGRATE_VERSION}/migrate.linux-amd64.tar.gz | tar xvz
+  - mv migrate /usr/local/bin/migrate
+  - which migrate
+  - make create_postgres
+  - sleep 5 # wait for postgres to start
+  - make create_db
+  - echo "Running database migrations..."
+  - export DB_HOST=postgres
+  - make migrate_up
+
+test:
+  stage: test
+  image: ubuntu:22.04
+  script:
+    - echo "Running tests..."
+    - export DB_SOURCE=postgresql://mole_user:secret@postgres:5432/mole?sslmode=disable
+    - make test

@@ -1,0 +1,13 @@
+version: '3'
+services:
+  angular:
+    build:
+      context: ./angular
+      dockerfile: Dockerfile
+    # network_mode: "host"
+    ports:
+      - "4200:4200"
+    volumes:
+      - ./angular:/app:delegated
+      - /app/node_modules
+    command: ng serve --host 0.0.0.0
