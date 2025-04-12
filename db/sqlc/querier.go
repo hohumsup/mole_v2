@@ -12,7 +12,7 @@ import (
 )
 
 type Querier interface {
-	// Insert the position data for each instance if it exists
+	// Description: One shot bulk insert of entities in a single db round trip
 	BulkCreateEntities(ctx context.Context, dollar_1 []byte) error
 	//----------------------------------------------------
 	// Entity Queries
